@@ -29,5 +29,16 @@ override.tf.json
 *.tfvars
 *.tfvars.json
 
-# MacOS File
+# MacOS files
 **/.DS_Store
+# Windows files
+**/Thumbs.db
+
+# Functions artifacts
+functions/*.zip
+# Functions dependencies
+functions/**/vendor/
+# Functions workspace file
+functions/**/go.work
+# Functions test binaries, built with `go test -c`
+functions/**/*.test
