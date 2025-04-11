@@ -5,6 +5,10 @@ updates:
     directory: "/"
     schedule:
       interval: daily
+  - package-ecosystem: gomod
+    directories: "/functions/*"
+    schedule:
+      interval: daily
   - package-ecosystem: terraform
     directory: "/"
     schedule:
