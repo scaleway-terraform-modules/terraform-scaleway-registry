@@ -1,6 +1,6 @@
 module purge
 
-go 1.23
+go 1.23.8
 
 require github.com/scaleway/scaleway-sdk-go v1.0.0-beta.33
 
