@@ -59,12 +59,12 @@ module "my_registry" {
 
 | Name | Description |
 |------|-------------|
-| <a name="output_cleanup_application_id"></a> [cleanup_application_id](#output_cleanup_application_id) | ID of the IAM application for the cleanup function. |
-| <a name="output_cleanup_cron_id"></a> [cleanup_cron_id](#output_cleanup_cron_id) | ID of the cron trigger for the cleanup function. |
-| <a name="output_cleanup_function_endpoint"></a> [cleanup_function_endpoint](#output_cleanup_function_endpoint) | Endpoint URL of the cleanup function. |
 | <a name="output_endpoint"></a> [endpoint](#output_endpoint) | URL of the namespace. |
 | <a name="output_id"></a> [id](#output_id) | ID of the namespace. |
 | <a name="output_maintenance_namespace_id"></a> [maintenance_namespace_id](#output_maintenance_namespace_id) | ID of the maintenance function namespace. |
+| <a name="output_purge_application_id"></a> [purge_application_id](#output_purge_application_id) | ID of the IAM application for the cleanup function. |
+| <a name="output_purge_cron_id"></a> [purge_cron_id](#output_purge_cron_id) | ID of the cron trigger for the cleanup function. |
+| <a name="output_purge_function_endpoint"></a> [purge_function_endpoint](#output_purge_function_endpoint) | Endpoint URL of the cleanup function. |
 | <a name="output_purge_function_id"></a> [purge_function_id](#output_purge_function_id) | ID of the cleanup function. |
 <!-- END_TF_DOCS -->
 
