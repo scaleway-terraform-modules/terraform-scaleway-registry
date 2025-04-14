@@ -62,7 +62,7 @@ resource "scaleway_function" "registry_purge" {
   environment_variables = {
     REGISTRY_NAMESPACE    = var.name
     RETENTION_DAYS        = var.purge_retention_days
-    PRESERVE_TAG_PATTERNS = join(",", var.purge_preserve_tag_patterns)
+    PRESERVE_TAG_PATTERNS = join("|", var.purge_preserve_tag_patterns)
     DRY_RUN               = var.purge_dry_run
     LOG_LEVEL             = var.purge_log_level
   }
