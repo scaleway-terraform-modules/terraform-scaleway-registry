@@ -62,7 +62,7 @@ var (
 )
 
 func init() {
-	slog.Info("===== Init container =====")
+	slog.Info("===== Runing 'init' =====")
 	// Set log level based on environment variable
 	var logLevel slog.Level
 	slogLevel, err := strconv.Atoi(os.Getenv("LOG_LEVEL"))
@@ -149,7 +149,7 @@ func init() {
 }
 
 func Handle(w http.ResponseWriter, r *http.Request) {
-	slog.Info("===== Starting purge =====")
+	slog.Info("===== Runing 'Handle' =====")
 	// Get Retention date
 	retentionDate := time.Now().AddDate(0, 0, -config.RetentionDays)
 	slog.Info(fmt.Sprintf("Purging images older than: %s", retentionDate.Format(time.RFC3339)))
@@ -196,15 +196,15 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 		for _, tag := range tags {
 			// Check if tag is older than retention date
 			if tag.UpdatedAt.Before(retentionDate) {
-				slog.Info(fmt.Sprintf("Tag %s:%s updated at %s is older than retention date %s",
+				slog.Debug(fmt.Sprintf("Tag %s:%s updated at %s is older than retention date %s",
 					image.Name, tag.Name, tag.UpdatedAt.Format(time.RFC3339), retentionDate.Format(time.RFC3339)))
 
 				// Check if tag is protected
 				if config.PreserveTagPatterns.MatchString(tag.Name) {
-					slog.Info(fmt.Sprintf("Tag %s match protection pattern. Preserving", tag.Name))
+					slog.Debug(fmt.Sprintf("Tag %s match protection pattern. Preserving", tag.Name))
 					preservedTags++
 				} else {
-					slog.Info(fmt.Sprintf("Tag %s doesn't match protection pattern.", tag.Name))
+					slog.Debug(fmt.Sprintf("Tag %s doesn't match protection pattern.", tag.Name))
 					// Delete tag if not dry run
 					if err := registryClient.DeleteTag(context.Background(), tag); err != nil {
 						slog.Error(fmt.Sprintf("Failed to delete tag %s (%s): %v", tag.Name, tag.ID, err))
@@ -214,7 +214,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 					deletedTags++
 				}
 			} else {
-				slog.Info(fmt.Sprintf("Tag %s updated at %s is newer than retention date %s. Skipping",
+				slog.Debug(fmt.Sprintf("Tag %s updated at %s is newer than retention date %s. Skipping",
 					tag.Name, tag.UpdatedAt.Format(time.RFC3339), retentionDate.Format(time.RFC3339)))
 				skippedTags++
 			}
@@ -233,7 +233,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 // DeleteTag deletes a tag
 func (r *RegistryClient) DeleteTag(ctx context.Context, tag *registry.Tag) error {
 	if r.config.DryRun {
-		slog.Info(fmt.Sprintf("[DRY RUN] Would delete tag: %s (%s)", tag.Name, tag.ID))
+		slog.Debug(fmt.Sprintf("[DRY RUN] Would delete tag: %s (%s)", tag.Name, tag.ID))
 		return nil
 	}
 
