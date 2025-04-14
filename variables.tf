@@ -35,9 +35,12 @@ variable "purge_retention_days" {
 }
 
 variable "purge_preserve_tag_patterns" {
-  description = "List of regex patterns for tags to preserve. By default, preserves semantic versioning tags."
+  description = "List of regex patterns for tags to preserve. By default, preserves semantic versioning tags and `latest` tags."
   type        = list(string)
-  default     = ["^v(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"]
+  default = [
+    "^latest((-.+)?)$",
+    "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
+  ]
 }
 
 variable "purge_schedule" {
