@@ -14,22 +14,22 @@ output "maintenance_namespace_id" {
 }
 
 # Cleanup function outputs
-output "purge_function_id" {
-  description = "ID of the cleanup function."
-  value       = scaleway_function.registry_purge.id
-}
-
-output "cleanup_function_endpoint" {
-  description = "Endpoint URL of the cleanup function."
-  value       = scaleway_function.registry_purge.domain_name
-}
-
-output "cleanup_application_id" {
+output "purge_application_id" {
   description = "ID of the IAM application for the cleanup function."
   value       = scaleway_iam_application.registry_purge.id
 }
 
-output "cleanup_cron_id" {
+output "purge_cron_id" {
   description = "ID of the cron trigger for the cleanup function."
   value       = var.purge_schedule != "" ? scaleway_function_cron.registry_purge[0].id : null
+}
+
+output "purge_function_endpoint" {
+  description = "Endpoint URL of the cleanup function."
+  value       = scaleway_function.registry_purge.domain_name
+}
+
+output "purge_function_id" {
+  description = "ID of the cleanup function."
+  value       = scaleway_function.registry_purge.id
 }
