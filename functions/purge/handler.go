@@ -171,7 +171,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	registryClient.namespace = namespace
 
 	// Get all images
-	images, err := registryClient.ListImages(context.Background())
+	images, err := registryClient.listImages(context.Background())
 	if err != nil {
 		slog.Error(fmt.Sprintf("failed to get images from namespace: %w.", err))
 		panic(err)
@@ -185,7 +185,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	// Process each image
 	for _, image := range images {
 		// List tags for the image
-		tags, err := registryClient.ListTags(context.Background(), image)
+		tags, err := registryClient.listTags(context.Background(), image)
 		if err != nil {
 			slog.Error(fmt.Sprintf("Failed to list tags for image %s: %v", image.ID, err))
 			errorImages++
@@ -206,7 +206,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 				} else {
 					slog.Debug(fmt.Sprintf("Tag %s doesn't match protection pattern.", tag.Name))
 					// Delete tag if not dry run
-					if err := registryClient.DeleteTag(context.Background(), tag); err != nil {
+					if err := registryClient.deleteTag(context.Background(), tag); err != nil {
 						slog.Error(fmt.Sprintf("Failed to delete tag %s (%s): %v", tag.Name, tag.ID, err))
 						errorTags++
 						continue
@@ -230,8 +230,8 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	// 	deletedImages, skippedImages, preservedImages, errorImages))
 }
 
-// DeleteTag deletes a tag
-func (r *RegistryClient) DeleteTag(ctx context.Context, tag *registry.Tag) error {
+// deleteTag deletes a tag
+func (r *RegistryClient) deleteTag(ctx context.Context, tag *registry.Tag) error {
 	if r.config.DryRun {
 		slog.Info(fmt.Sprintf("[DRY RUN] Would delete tag: %s (%s)", tag.Name, tag.ID))
 		return nil
@@ -272,8 +272,8 @@ func (r *RegistryClient) getNamespace(ctx context.Context) (*registry.Namespace,
 	return res.Namespaces[0], nil
 }
 
-// ListImages lists all images in the registry namespace
-func (r *RegistryClient) ListImages(ctx context.Context) ([]*registry.Image, error) {
+// listImages lists all images in the registry namespace
+func (r *RegistryClient) listImages(ctx context.Context) ([]*registry.Image, error) {
 	slog.Info(fmt.Sprintf("Listing images in namespace: %s", r.namespace.Name))
 
 	var allImages []*registry.Image
@@ -306,8 +306,8 @@ func (r *RegistryClient) ListImages(ctx context.Context) ([]*registry.Image, err
 	return allImages, nil
 }
 
-// ListTags lists all tags for an image
-func (r *RegistryClient) ListTags(ctx context.Context, image *registry.Image) ([]*registry.Tag, error) {
+// listTags lists all tags for an image
+func (r *RegistryClient) listTags(ctx context.Context, image *registry.Image) ([]*registry.Tag, error) {
 	slog.Info(fmt.Sprintf("Listing tags for image: %s", image.Name))
 
 	var allTags []*registry.Tag
