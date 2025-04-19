@@ -233,7 +233,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 // DeleteTag deletes a tag
 func (r *RegistryClient) DeleteTag(ctx context.Context, tag *registry.Tag) error {
 	if r.config.DryRun {
-		slog.Debug(fmt.Sprintf("[DRY RUN] Would delete tag: %s (%s)", tag.Name, tag.ID))
+		slog.Info(fmt.Sprintf("[DRY RUN] Would delete tag: %s (%s)", tag.Name, tag.ID))
 		return nil
 	}
 
