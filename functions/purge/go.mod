@@ -1,7 +1,7 @@
 module purge
 
-go 1.24.0
+go 1.25.0
 
-require github.com/scaleway/scaleway-sdk-go v1.0.0-beta.36
+require github.com/scaleway/scaleway-sdk-go v1.0.0-beta.37
 
 require gopkg.in/yaml.v2 v2.4.0 // indirect
