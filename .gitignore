@@ -42,3 +42,7 @@ functions/**/vendor/
 functions/**/go.work
 # Functions test binaries, built with `go test -c`
 functions/**/*.test
+
+# IDE configuration
+.idea/
+.vscode/
