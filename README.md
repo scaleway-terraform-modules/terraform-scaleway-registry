@@ -24,7 +24,7 @@ module "my_registry" {
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement_terraform) | >= 1.11 |
 | <a name="requirement_archive"></a> [archive](#requirement_archive) | >= 2.0.0 |
-| <a name="requirement_scaleway"></a> [scaleway](#requirement_scaleway) | >= 2.0.0 |
+| <a name="requirement_scaleway"></a> [scaleway](#requirement_scaleway) | >= 2.79.0 |
 
 ## Resources
 
