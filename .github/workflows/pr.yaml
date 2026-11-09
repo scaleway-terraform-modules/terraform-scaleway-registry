@@ -22,17 +22,29 @@ jobs:
   go_check:
     name: "Go: Syntax checks"
     runs-on: ubuntu-latest
+    env:
+      # Build with the function runtime's Go version only, as Scaleway does: never download a newer toolchain.
+      GOTOOLCHAIN: local
     steps:
       - id: repo_checkout
         name: "Repository: Checkout"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
+      - id: "go_runtime"
+        name: "Go: Read the function runtime"
+        run: |
+          version=$(sed -n 's/^ *runtime *= *"go\([0-9]\)\([0-9]*\)".*/\1.\2/p' functions.tf)
+          if [ -z "${version}" ]; then
+            echo "::error file=functions.tf::Could not read the Go runtime of the purge function."
+            exit 1
+          fi
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
       - id: "go_setup"
         name: "Go: Setup"
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e  # v7.0.0
         with:
-          go-version-file: 'functions/purge/go.mod'
+          go-version: ${{ steps.go_runtime.outputs.version }}
           cache-dependency-path: |
               functions/purge/go.sum
       - id: "go_fmt"
