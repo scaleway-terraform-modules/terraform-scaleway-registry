@@ -15,7 +15,7 @@ import (
 )
 
 // Default semver pattern for tag preservation
-const DefaultTagPattern string = `^latest((-.+)?)$|^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$`
+const DefaultTagPattern string = `^latest((-.+)?)$|^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`
 
 // Config holds the configuration for the purge function
 type Config struct {
@@ -127,10 +127,18 @@ func init() {
 		config.RetentionDays = 30
 	}
 
-	config.PreserveTagPatterns, err = regexp.Compile(os.Getenv("PRESERVE_TAG_PATTERNS"))
+	// PRESERVE_TAG_PATTERNS is the "|"-joined var.purge_preserve_tag_patterns
+	// (see functions.tf). On a compile error the function falls back to the
+	// default SemVer pattern and is forced into dry-run mode, the same way an
+	// invalid DRY_RUN or RETENTION_DAYS value is handled: never delete tags
+	// with a pattern the operator could not have intended.
+	var forceDryRun bool
+	config.PreserveTagPatterns, forceDryRun, err = resolveTagPreservation(os.Getenv("PRESERVE_TAG_PATTERNS"))
 	if err != nil {
-		fmt.Errorf("Failed to parse PRESERVE_TAG_PATTERNS: %w. Enforcing SemVer 2.0.0 tags", err)
-		config.PreserveTagPatterns = regexp.MustCompile(DefaultTagPattern)
+		slog.Error(fmt.Sprintf("Failed to parse PRESERVE_TAG_PATTERNS: %v. Enforcing the default SemVer 2.0.0 pattern and Dry Run mode", err))
+	}
+	if forceDryRun {
+		config.DryRun = true
 	}
 
 	slog.Info(fmt.Sprintf("Dry Run mode: %t.", config.DryRun))
@@ -143,7 +151,7 @@ func init() {
 		scw.WithDefaultProjectID(config.ProjectID),
 	)
 	if err != nil {
-		slog.Error(fmt.Sprintf("failed to create Scaleway client: %w.", err))
+		slog.Error(fmt.Sprintf("failed to create Scaleway client: %v.", err))
 		panic(err)
 	}
 }
@@ -165,7 +173,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	// Get namespace
 	namespace, err := registryClient.getNamespace(context.Background())
 	if err != nil {
-		slog.Error(fmt.Sprintf("failed to get registry namespace: %w.", err))
+		slog.Error(fmt.Sprintf("failed to get registry namespace: %v.", err))
 		panic(err)
 	}
 	registryClient.namespace = namespace
@@ -173,7 +181,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	// Get all images
 	images, err := registryClient.listImages(context.Background())
 	if err != nil {
-		slog.Error(fmt.Sprintf("failed to get images from namespace: %w.", err))
+		slog.Error(fmt.Sprintf("failed to get images from namespace: %v.", err))
 		panic(err)
 	}
 
@@ -228,6 +236,23 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 		errorImages))
 	// slog.Info(fmt.Sprintf("Purge summary: %d images deleted, %d images skipped, %d images preserved, %d errors",
 	// 	deletedImages, skippedImages, preservedImages, errorImages))
+}
+
+// resolveTagPreservation compiles the "|" -joined preserve-tag patterns. On
+// an invalid pattern it returns the default SemVer pattern together with
+// forceDryRun=true and the compile error, so the caller can log it and fall
+// back safely. An empty value keeps the previous semantics: the empty
+// pattern matches every tag, so everything is preserved and nothing is
+// deleted (no error, no forced dry-run).
+func resolveTagPreservation(joined string) (*regexp.Regexp, bool, error) {
+	if joined == "" {
+		return regexp.MustCompile(""), false, nil
+	}
+	re, err := regexp.Compile(joined)
+	if err != nil {
+		return regexp.MustCompile(DefaultTagPattern), true, err
+	}
+	return re, false, nil
 }
 
 // deleteTag deletes a tag

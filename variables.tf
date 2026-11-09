@@ -41,6 +41,10 @@ variable "purge_preserve_tag_patterns" {
     "^latest((-.+)?)$",
     "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
   ]
+  validation {
+    condition     = alltrue([for pattern in var.purge_preserve_tag_patterns : can(regex(pattern))])
+    error_message = "Each preserve tag pattern must be a valid regular expression (RE2), as used by the Go runtime."
+  }
 }
 
 variable "purge_schedule" {
