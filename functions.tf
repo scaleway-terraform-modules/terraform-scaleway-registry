@@ -49,7 +49,7 @@ resource "scaleway_function" "registry_purge" {
   handler      = "Handle"
   http_option  = "redirected"
   privacy      = "private"
-  runtime      = "go123"
+  runtime      = "go126" # Must provide the Go version required by functions/purge/go.mod: the CI builds with it.
   timeout      = var.purge_timeout
 
   memory_limit = 128
