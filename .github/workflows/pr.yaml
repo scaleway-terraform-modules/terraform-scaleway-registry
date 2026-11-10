@@ -49,12 +49,35 @@ jobs:
               functions/purge/go.sum
       - id: "go_fmt"
         name: "Go: Check formatting"
-        run: go fmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "${unformatted}" ]; then
+            for file in ${unformatted}; do
+              echo "::error file=functions/purge/${file}::File is not formatted with gofmt."
+            done
+            gofmt -d .
+            exit 1
+          fi
+        working-directory: functions/purge
+      - id: "go_vet"
+        name: "Go: Vet the packages"
+        run: go vet ./...
         working-directory: functions/purge
       - id: "go_build"
-        name: "Go: Build the package"
-        run: go build
+        name: "Go: Build the packages"
+        run: go build ./...
         working-directory: functions/purge
+      - id: "go_test"
+        name: "Go: Run the tests"
+        run: go test ./...
+        working-directory: functions/purge
+        env:
+          # init() requires these variables, in the format the Scaleway SDK expects.
+          REGISTRY_ACCESS_KEY: SCW0123456789ABCDEF1
+          REGISTRY_NAMESPACE: test
+          REGISTRY_PROJECT_ID: 01234567-89ab-cdef-0123-456789abcdef
+          REGISTRY_REGION: fr-par
+          REGISTRY_SECRET_KEY: 01234567-89ab-cdef-0123-456789abcdef
   tf_module_check:
     name: "Terraform Module: Code checks"
     uses: scaleway-terraform-modules/workflows/.github/workflows/tf_module_check.yaml@2510c7c05af9229bf86d42c8593c3f64a72886d1  # v2.1.16
