@@ -129,7 +129,7 @@ func init() {
 
 	config.PreserveTagPatterns, err = regexp.Compile(os.Getenv("PRESERVE_TAG_PATTERNS"))
 	if err != nil {
-		fmt.Errorf("Failed to parse PRESERVE_TAG_PATTERNS: %w. Enforcing SemVer 2.0.0 tags", err)
+		slog.Error(fmt.Sprintf("Failed to parse PRESERVE_TAG_PATTERNS: %v. Enforcing SemVer 2.0.0 tags", err))
 		config.PreserveTagPatterns = regexp.MustCompile(DefaultTagPattern)
 	}
 
@@ -143,7 +143,7 @@ func init() {
 		scw.WithDefaultProjectID(config.ProjectID),
 	)
 	if err != nil {
-		slog.Error(fmt.Sprintf("failed to create Scaleway client: %w.", err))
+		slog.Error(fmt.Sprintf("failed to create Scaleway client: %v.", err))
 		panic(err)
 	}
 }
@@ -165,7 +165,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	// Get namespace
 	namespace, err := registryClient.getNamespace(context.Background())
 	if err != nil {
-		slog.Error(fmt.Sprintf("failed to get registry namespace: %w.", err))
+		slog.Error(fmt.Sprintf("failed to get registry namespace: %v.", err))
 		panic(err)
 	}
 	registryClient.namespace = namespace
@@ -173,7 +173,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	// Get all images
 	images, err := registryClient.listImages(context.Background())
 	if err != nil {
-		slog.Error(fmt.Sprintf("failed to get images from namespace: %w.", err))
+		slog.Error(fmt.Sprintf("failed to get images from namespace: %v.", err))
 		panic(err)
 	}
 
