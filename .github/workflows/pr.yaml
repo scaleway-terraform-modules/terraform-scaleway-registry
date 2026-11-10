@@ -40,6 +40,14 @@ jobs:
             exit 1
           fi
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
+      - id: "go_directive"
+        name: "Go: Check the go directive"
+        # The runtime may provide an older patch release than go.mod requires: only allow `go X.Y` or `go X.Y.0`.
+        run: |
+          if grep -Eq '^go [0-9]+\.[0-9]+\.[1-9][0-9]*$' functions/purge/go.mod; then
+            echo "::error file=functions/purge/go.mod::The go directive must not require a patch release: use 'go X.Y.0'."
+            exit 1
+          fi
       - id: "go_setup"
         name: "Go: Setup"
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e  # v7.0.0
