@@ -46,7 +46,7 @@ resource "archive_file" "registry_purge" {
   count       = local.purge_count
   type        = "zip"
   source_dir  = "${path.module}/functions/purge"
-  output_path = "${path.module}/functions/purge.zip"
+  output_path = "${path.module}/functions/purge-${var.name}.zip" # One archive per registry: module calls sourced from the same path share path.module
   excludes    = [".git", ".gitignore", "README.md", "vendor"]
 }
 
