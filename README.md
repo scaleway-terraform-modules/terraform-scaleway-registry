@@ -23,6 +23,8 @@ Along with the namespace, the module deploys a Scaleway Function that deletes ol
 
 **The function runs in dry-run mode by default:** it only logs the tags it would delete. Set `purge_dry_run = false` to actually delete them.
 
+The function calls Scaleway's API with an API key the module creates for it: an IAM application with the `ContainerRegistryFullAccess` permission set on the namespace's **whole project**, and an API key that never expires. The key's secret is stored in the Terraform state, so keep the state in a protected backend. If you don't need the purge, set `purge_enabled = false`: the module then creates neither the function nor its IAM resources, and stores no key.
+
 For each tag of each image in the namespace, the function:
 
 1. Dates the tag with its last update date. If the tag has no update date, it logs a warning and uses its creation date instead. If it has no creation date either, it logs a second warning and keeps the tag: its age is unknown.
@@ -63,6 +65,7 @@ At the end of each run, it logs how many tags were deleted, skipped, preserved, 
 | <a name="input_is_public"></a> [is_public](#input_is_public) | Whether the images stored in the namespace should be downloadable publicly (docker pull). | `bool` | `false` | no |
 | <a name="input_project_id"></a> [project_id](#input_project_id) | ID of the project the namespace is associated with. Ressource will be created in the project set at the provider level if null. | `string` | `null` | no |
 | <a name="input_purge_dry_run"></a> [purge_dry_run](#input_purge_dry_run) | Prevent deletion of tags & images. | `bool` | `true` | no |
+| <a name="input_purge_enabled"></a> [purge_enabled](#input_purge_enabled) | Whether to deploy the purge function, with its function namespace, cron trigger, and the IAM application, policy and API key it uses. When disabled, none of them is created, so no API key secret is stored in the Terraform state. | `bool` | `true` | no |
 | <a name="input_purge_log_level"></a> [purge_log_level](#input_purge_log_level) | Log Level of the purge function. Refer to the Go [slog package documentation](https://pkg.go.dev/log/slog#Level) for accepted values | `number` | `0` | no |
 | <a name="input_purge_preserve_tag_patterns"></a> [purge_preserve_tag_patterns](#input_purge_preserve_tag_patterns) | List of regex patterns for tags to preserve. By default, preserves semantic versioning tags and `latest` tags. | `list(string)` | ```[ "^latest((-.+)?)$", "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$" ]``` | no |
 | <a name="input_purge_retention_days"></a> [purge_retention_days](#input_purge_retention_days) | Number of days to keep a tag after its last update (or its creation, if it has no update date) before deleting it. Tags without either date are never deleted. | `number` | `30` | no |
@@ -76,11 +79,11 @@ At the end of each run, it logs how many tags were deleted, skipped, preserved, 
 |------|-------------|
 | <a name="output_endpoint"></a> [endpoint](#output_endpoint) | URL of the namespace. |
 | <a name="output_id"></a> [id](#output_id) | ID of the namespace. |
-| <a name="output_maintenance_namespace_id"></a> [maintenance_namespace_id](#output_maintenance_namespace_id) | ID of the maintenance function namespace. |
-| <a name="output_purge_application_id"></a> [purge_application_id](#output_purge_application_id) | ID of the IAM application for the cleanup function. |
-| <a name="output_purge_cron_id"></a> [purge_cron_id](#output_purge_cron_id) | ID of the cron trigger for the cleanup function. |
-| <a name="output_purge_function_endpoint"></a> [purge_function_endpoint](#output_purge_function_endpoint) | Endpoint URL of the cleanup function. |
-| <a name="output_purge_function_id"></a> [purge_function_id](#output_purge_function_id) | ID of the cleanup function. |
+| <a name="output_maintenance_namespace_id"></a> [maintenance_namespace_id](#output_maintenance_namespace_id) | ID of the maintenance function namespace. Null when `purge_enabled` is false. |
+| <a name="output_purge_application_id"></a> [purge_application_id](#output_purge_application_id) | ID of the IAM application for the cleanup function. Null when `purge_enabled` is false. |
+| <a name="output_purge_cron_id"></a> [purge_cron_id](#output_purge_cron_id) | ID of the cron trigger for the cleanup function. Null when `purge_enabled` is false or `purge_schedule` is empty. |
+| <a name="output_purge_function_endpoint"></a> [purge_function_endpoint](#output_purge_function_endpoint) | Endpoint URL of the cleanup function. Null when `purge_enabled` is false. |
+| <a name="output_purge_function_id"></a> [purge_function_id](#output_purge_function_id) | ID of the cleanup function. Null when `purge_enabled` is false. |
 <!-- END_TF_DOCS -->
 
 ## Authors
