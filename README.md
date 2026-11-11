@@ -17,6 +17,21 @@ module "my_registry" {
 }
 ```
 
+## Purge function
+
+Along with the namespace, the module deploys a Scaleway Function that deletes old tags from it. It runs on the `purge_schedule` cron schedule (every day at midnight by default; set it to `""` to only run it by hand), and logs what it does in Cockpit.
+
+**The function runs in dry-run mode by default:** it only logs the tags it would delete. Set `purge_dry_run = false` to actually delete them.
+
+For each tag of each image in the namespace, the function:
+
+1. Dates the tag with its last update date. If the tag has no update date, it logs a warning and uses its creation date instead. If it has no creation date either, it logs a second warning and keeps the tag: its age is unknown.
+2. Keeps the tag if it is more recent than `purge_retention_days` days.
+3. Keeps the tag if its name matches one of the `purge_preserve_tag_patterns` regular expressions (by default `latest`, `latest-*` and [semantic versions](https://semver.org/) such as `1.2.3`).
+4. Deletes the tag otherwise.
+
+At the end of each run, it logs how many tags were deleted, skipped, preserved, or failed to be deleted.
+
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
@@ -50,7 +65,7 @@ module "my_registry" {
 | <a name="input_purge_dry_run"></a> [purge_dry_run](#input_purge_dry_run) | Prevent deletion of tags & images. | `bool` | `true` | no |
 | <a name="input_purge_log_level"></a> [purge_log_level](#input_purge_log_level) | Log Level of the purge function. Refer to the Go [slog package documentation](https://pkg.go.dev/log/slog#Level) for accepted values | `number` | `0` | no |
 | <a name="input_purge_preserve_tag_patterns"></a> [purge_preserve_tag_patterns](#input_purge_preserve_tag_patterns) | List of regex patterns for tags to preserve. By default, preserves semantic versioning tags and `latest` tags. | `list(string)` | ```[ "^latest((-.+)?)$", "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$" ]``` | no |
-| <a name="input_purge_retention_days"></a> [purge_retention_days](#input_purge_retention_days) | Number of days to keep images before deletion. | `number` | `30` | no |
+| <a name="input_purge_retention_days"></a> [purge_retention_days](#input_purge_retention_days) | Number of days to keep a tag after its last update (or its creation, if it has no update date) before deleting it. Tags without either date are never deleted. | `number` | `30` | no |
 | <a name="input_purge_schedule"></a> [purge_schedule](#input_purge_schedule) | Cron schedule for the cleanup function. Set to empty string to disable scheduled cleanup. | `string` | `"0 0 * * *"` | no |
 | <a name="input_purge_timeout"></a> [purge_timeout](#input_purge_timeout) | Timeout for the cleanup function in seconds. | `number` | `300` | no |
 | <a name="input_region"></a> [region](#input_region) | Region in which the namespace should be created. Ressource will be created in the region set at the provider level if null. | `string` | `null` | no |

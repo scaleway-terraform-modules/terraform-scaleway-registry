@@ -29,7 +29,7 @@ variable "project_id" {
 
 # Purge function variables
 variable "purge_retention_days" {
-  description = "Number of days to keep images before deletion."
+  description = "Number of days to keep a tag after its last update (or its creation, if it has no update date) before deleting it. Tags without either date are never deleted."
   type        = number
   default     = 30
 }
