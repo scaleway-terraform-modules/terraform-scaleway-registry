@@ -69,21 +69,24 @@ At the end of each run, it logs how many tags were deleted, skipped, preserved, 
 | <a name="input_purge_log_level"></a> [purge_log_level](#input_purge_log_level) | Log Level of the purge function. Refer to the Go [slog package documentation](https://pkg.go.dev/log/slog#Level) for accepted values | `number` | `0` | no |
 | <a name="input_purge_preserve_tag_patterns"></a> [purge_preserve_tag_patterns](#input_purge_preserve_tag_patterns) | List of regex patterns for tags to preserve. By default, preserves semantic versioning tags and `latest` tags. | `list(string)` | ```[ "^latest((-.+)?)$", "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$" ]``` | no |
 | <a name="input_purge_retention_days"></a> [purge_retention_days](#input_purge_retention_days) | Number of days to keep a tag after its last update (or its creation, if it has no update date) before deleting it. Tags without either date are never deleted. | `number` | `30` | no |
-| <a name="input_purge_schedule"></a> [purge_schedule](#input_purge_schedule) | Cron schedule for the cleanup function. Set to empty string to disable scheduled cleanup. | `string` | `"0 0 * * *"` | no |
-| <a name="input_purge_timeout"></a> [purge_timeout](#input_purge_timeout) | Timeout for the cleanup function in seconds. | `number` | `300` | no |
+| <a name="input_purge_schedule"></a> [purge_schedule](#input_purge_schedule) | Cron schedule of the purge function. Set to an empty string to only run it by hand. | `string` | `"0 0 * * *"` | no |
+| <a name="input_purge_timeout"></a> [purge_timeout](#input_purge_timeout) | Timeout of the purge function, in seconds. | `number` | `300` | no |
 | <a name="input_region"></a> [region](#input_region) | Region in which the namespace should be created. Ressource will be created in the region set at the provider level if null. | `string` | `null` | no |
 
 ## Outputs
 
 | Name | Description |
 |------|-------------|
-| <a name="output_endpoint"></a> [endpoint](#output_endpoint) | URL of the namespace. |
-| <a name="output_id"></a> [id](#output_id) | ID of the namespace. |
 | <a name="output_maintenance_namespace_id"></a> [maintenance_namespace_id](#output_maintenance_namespace_id) | ID of the maintenance function namespace. Null when `purge_enabled` is false. |
-| <a name="output_purge_application_id"></a> [purge_application_id](#output_purge_application_id) | ID of the IAM application for the cleanup function. Null when `purge_enabled` is false. |
-| <a name="output_purge_cron_id"></a> [purge_cron_id](#output_purge_cron_id) | ID of the cron trigger for the cleanup function. Null when `purge_enabled` is false or `purge_schedule` is empty. |
-| <a name="output_purge_function_endpoint"></a> [purge_function_endpoint](#output_purge_function_endpoint) | Endpoint URL of the cleanup function. Null when `purge_enabled` is false. |
-| <a name="output_purge_function_id"></a> [purge_function_id](#output_purge_function_id) | ID of the cleanup function. Null when `purge_enabled` is false. |
+| <a name="output_namespace_endpoint"></a> [namespace_endpoint](#output_namespace_endpoint) | Address of the namespace, as used by `docker login`, `docker push` and `docker pull` (`rg.{region}.scw.cloud/{name}`). |
+| <a name="output_namespace_id"></a> [namespace_id](#output_namespace_id) | ID of the namespace. |
+| <a name="output_namespace_name"></a> [namespace_name](#output_namespace_name) | Name of the namespace. |
+| <a name="output_namespace_project_id"></a> [namespace_project_id](#output_namespace_project_id) | ID of the project containing the namespace. |
+| <a name="output_namespace_region"></a> [namespace_region](#output_namespace_region) | Region of the namespace. |
+| <a name="output_purge_application_id"></a> [purge_application_id](#output_purge_application_id) | ID of the IAM application used by the purge function. Null when `purge_enabled` is false. |
+| <a name="output_purge_cron_id"></a> [purge_cron_id](#output_purge_cron_id) | ID of the cron trigger of the purge function. Null when `purge_enabled` is false or `purge_schedule` is empty. |
+| <a name="output_purge_function_endpoint"></a> [purge_function_endpoint](#output_purge_function_endpoint) | Domain name of the purge function (without `https://`). Null when `purge_enabled` is false. |
+| <a name="output_purge_function_id"></a> [purge_function_id](#output_purge_function_id) | ID of the purge function. Null when `purge_enabled` is false. |
 <!-- END_TF_DOCS -->
 
 ## Authors

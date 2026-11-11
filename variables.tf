@@ -54,14 +54,14 @@ variable "purge_preserve_tag_patterns" {
 }
 
 variable "purge_schedule" {
-  description = "Cron schedule for the cleanup function. Set to empty string to disable scheduled cleanup."
+  description = "Cron schedule of the purge function. Set to an empty string to only run it by hand."
   type        = string
   default     = "0 0 * * *"
   nullable    = false
 }
 
 variable "purge_timeout" {
-  description = "Timeout for the cleanup function in seconds."
+  description = "Timeout of the purge function, in seconds."
   type        = number
   default     = 300
   nullable    = false
