@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -41,6 +42,31 @@ type Config struct {
 type ConfigError struct {
 	Field   string
 	Message string
+}
+
+// Error returns the message of the configuration error, prefixed by the faulty variable
+func (e *ConfigError) Error() string {
+	return fmt.Sprintf("%s: %s", e.Field, e.Message)
+}
+
+// Summary holds the result of a purge run, returned as the HTTP response body
+type Summary struct {
+	// DryRun is true if tags were not actually deleted
+	DryRun bool `json:"dry_run"`
+	// RetentionDate is the date before which tags are deleted (RFC 3339)
+	RetentionDate string `json:"retention_date"`
+	// DeletedTags is the number of tags deleted, or that would be deleted in dry-run mode
+	DeletedTags int `json:"deleted_tags"`
+	// SkippedTags is the number of tags kept because they are recent or have no date
+	SkippedTags int `json:"skipped_tags"`
+	// PreservedTags is the number of tags kept because they match a preserved pattern
+	PreservedTags int `json:"preserved_tags"`
+	// ErrorTags is the number of tags that failed to be deleted
+	ErrorTags int `json:"error_tags"`
+	// ErrorImages is the number of images whose tags failed to be listed
+	ErrorImages int `json:"error_images"`
+	// Error is the error that stopped the run, if any
+	Error string `json:"error,omitempty"`
 }
 
 // RegistryClient handles operations with the Scaleway Registry API
@@ -154,6 +180,13 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	retentionDate := time.Now().AddDate(0, 0, -config.RetentionDays)
 	slog.Info(fmt.Sprintf("Purging images older than: %s", retentionDate.Format(time.RFC3339)))
 
+	// Cancel the API calls when the request ends, e.g. when the function times out
+	ctx := r.Context()
+	summary := Summary{
+		DryRun:        config.DryRun,
+		RetentionDate: retentionDate.Format(time.RFC3339),
+	}
+
 	// Create registry API client
 	registryAPI := registry.NewAPI(scw_client)
 	// Create registry client
@@ -163,18 +196,22 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get namespace
-	namespace, err := registryClient.getNamespace(context.Background())
+	namespace, err := registryClient.getNamespace(ctx)
 	if err != nil {
 		slog.Error(fmt.Sprintf("failed to get registry namespace: %v.", err))
-		panic(err)
+		summary.Error = fmt.Sprintf("failed to get registry namespace: %v", err)
+		writeSummary(w, http.StatusInternalServerError, summary)
+		return
 	}
 	registryClient.namespace = namespace
 
 	// Get all images
-	images, err := registryClient.listImages(context.Background())
+	images, err := registryClient.listImages(ctx)
 	if err != nil {
 		slog.Error(fmt.Sprintf("failed to get images from namespace: %v.", err))
-		panic(err)
+		summary.Error = fmt.Sprintf("failed to get images from namespace: %v", err)
+		writeSummary(w, http.StatusInternalServerError, summary)
+		return
 	}
 
 	// Track statistics
@@ -185,7 +222,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	// Process each image
 	for _, image := range images {
 		// List tags for the image
-		tags, err := registryClient.listTags(context.Background(), image)
+		tags, err := registryClient.listTags(ctx, image)
 		if err != nil {
 			slog.Error(fmt.Sprintf("Failed to list tags for image %s: %v", image.ID, err))
 			errorImages++
@@ -219,7 +256,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 				} else {
 					slog.Debug(fmt.Sprintf("Tag %s doesn't match protection pattern.", tag.Name))
 					// Delete tag if not dry run
-					if err := registryClient.deleteTag(context.Background(), tag); err != nil {
+					if err := registryClient.deleteTag(ctx, tag); err != nil {
 						slog.Error(fmt.Sprintf("Failed to delete tag %s (%s): %v", tag.Name, tag.ID, err))
 						errorTags++
 						continue
@@ -241,6 +278,27 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 		errorImages))
 	// slog.Info(fmt.Sprintf("Purge summary: %d images deleted, %d images skipped, %d images preserved, %d errors",
 	// 	deletedImages, skippedImages, preservedImages, errorImages))
+
+	// Return the summary, with an error status if any tag or image failed
+	summary.DeletedTags = deletedTags
+	summary.SkippedTags = skippedTags
+	summary.PreservedTags = preservedTags
+	summary.ErrorTags = errorTags
+	summary.ErrorImages = errorImages
+	status := http.StatusOK
+	if errorTags > 0 || errorImages > 0 {
+		status = http.StatusInternalServerError
+	}
+	writeSummary(w, status, summary)
+}
+
+// writeSummary writes the summary of a purge run as a JSON response
+func writeSummary(w http.ResponseWriter, status int, summary Summary) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if err := json.NewEncoder(w).Encode(summary); err != nil {
+		slog.Error(fmt.Sprintf("Failed to write the response: %v", err))
+	}
 }
 
 // deleteTag deletes a tag
