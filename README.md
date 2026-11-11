@@ -30,7 +30,7 @@ For each tag of each image in the namespace, the function:
 3. Keeps the tag if its name matches one of the `purge_preserve_tag_patterns` regular expressions (by default `latest`, `latest-*` and [semantic versions](https://semver.org/) such as `1.2.3`).
 4. Deletes the tag otherwise.
 
-At the end of each run, it logs how many tags were deleted, skipped, preserved, or failed to be deleted.
+At the end of each run, it logs how many tags were deleted, skipped, preserved, or failed to be deleted. It also returns this summary as JSON, with status `200`, or `500` when a tag couldn't be deleted or an image's tags couldn't be listed. When the namespace or its images can't be listed, it stops and returns `500` with the error.
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
