@@ -18,7 +18,7 @@ variable "name" {
 
 variable "project_id" {
   type        = string
-  description = "ID of the project the namespace is associated with. Ressource will be created in the project set at the provider level if null."
+  description = "ID of the project the namespace is associated with. Resource will be created in the project set at the provider level if null."
   default     = null
 }
 
@@ -38,7 +38,7 @@ variable "purge_enabled" {
 
 variable "purge_log_level" {
   type        = number
-  description = "Log Level of the purge function. Refer to the Go [slog package documentation](https://pkg.go.dev/log/slog#Level) for accepted values"
+  description = "Log level of the purge function. Refer to the Go [slog package documentation](https://pkg.go.dev/log/slog#Level) for accepted values."
   default     = 0
   nullable    = false
 }
@@ -76,6 +76,6 @@ variable "purge_timeout" {
 
 variable "region" {
   type        = string
-  description = "Region in which the namespace should be created. Ressource will be created in the region set at the provider level if null."
+  description = "Region in which the namespace should be created. Resource will be created in the region set at the provider level if null."
   default     = null
 }
