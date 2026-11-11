@@ -17,6 +17,8 @@ module "my_registry" {
 }
 ```
 
+See the [examples](examples) folder for runnable configurations: a [simple](examples/simple-registry) private registry, a [public](examples/public-registry) one, a purge that [actually deletes tags](examples/purge-enabled), and a registry [without the purge function](examples/purge-disabled).
+
 ## Purge function
 
 Along with the namespace, the module deploys a Scaleway Function that deletes old tags from it. It runs on the `purge_schedule` cron schedule (every day at midnight by default; set it to `""` to only run it by hand), and logs what it does in Cockpit.
