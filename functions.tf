@@ -1,5 +1,11 @@
+locals {
+  # Number of instances of each purge resource: none when the purge is disabled
+  purge_count = var.purge_enabled ? 1 : 0
+}
+
 # Create a serverless namespace for maintenance functions
 resource "scaleway_function_namespace" "maintenance" {
+  count       = local.purge_count
   name        = format("%s-maintenance", var.name)
   description = format("Namespace for maintenance functions for %s registry", var.name)
   project_id  = scaleway_registry_namespace.this.project_id
@@ -8,15 +14,17 @@ resource "scaleway_function_namespace" "maintenance" {
 
 # Create an IAM application for the function
 resource "scaleway_iam_application" "registry_purge" {
+  count       = local.purge_count
   name        = format("%s-registry-purge", var.name)
   description = format("Application for the registry %s purge function", var.name)
 }
 
 # Create an IAM policy to allow the function to access the registry
 resource "scaleway_iam_policy" "registry_purge" {
+  count          = local.purge_count
   name           = format("%s-registry-purge-policy", var.name)
   description    = format("Policy for registry %s purge function", var.name)
-  application_id = scaleway_iam_application.registry_purge.id
+  application_id = scaleway_iam_application.registry_purge[0].id
 
   # Rule to allow the function to read and delete images in the registry namespace
   rule {
@@ -27,13 +35,15 @@ resource "scaleway_iam_policy" "registry_purge" {
 
 # Create an API key for the function
 resource "scaleway_iam_api_key" "registry_purge" {
-  application_id     = scaleway_iam_application.registry_purge.id
+  count              = local.purge_count
+  application_id     = scaleway_iam_application.registry_purge[0].id
   description        = format("API key for registry %s purge function", var.name)
   default_project_id = scaleway_registry_namespace.this.project_id
 }
 
 # Archive the function code
 resource "archive_file" "registry_purge" {
+  count       = local.purge_count
   type        = "zip"
   source_dir  = "${path.module}/functions/purge"
   output_path = "${path.module}/functions/purge.zip"
@@ -42,10 +52,11 @@ resource "archive_file" "registry_purge" {
 
 # Deploy the function
 resource "scaleway_function" "registry_purge" {
+  count        = local.purge_count
   name         = format("%s-purge", var.name)
   description  = format("Purges old images from the container registry namespace %s", var.name)
   deploy       = true
-  namespace_id = scaleway_function_namespace.maintenance.id
+  namespace_id = scaleway_function_namespace.maintenance[0].id
   handler      = "Handle"
   http_option  = "redirected"
   privacy      = "private"
@@ -56,8 +67,8 @@ resource "scaleway_function" "registry_purge" {
   max_scale    = 1
   min_scale    = 0
 
-  zip_file = archive_file.registry_purge.output_path
-  zip_hash = archive_file.registry_purge.output_sha256
+  zip_file = archive_file.registry_purge[0].output_path
+  zip_hash = archive_file.registry_purge[0].output_sha256
 
   environment_variables = {
     REGISTRY_NAMESPACE    = var.name
@@ -68,17 +79,48 @@ resource "scaleway_function" "registry_purge" {
   }
 
   secret_environment_variables = {
-    REGISTRY_ACCESS_KEY = scaleway_iam_api_key.registry_purge.access_key
-    REGISTRY_SECRET_KEY = scaleway_iam_api_key.registry_purge.secret_key
+    REGISTRY_ACCESS_KEY = scaleway_iam_api_key.registry_purge[0].access_key
+    REGISTRY_SECRET_KEY = scaleway_iam_api_key.registry_purge[0].secret_key
     REGISTRY_PROJECT_ID = scaleway_registry_namespace.this.project_id
     REGISTRY_REGION     = scaleway_registry_namespace.this.region
   }
 }
 
-# Create a cron trigger for the function only if cleanup_schedule is not empty
+# Create a cron trigger for the function only if the purge is enabled and purge_schedule is not empty
 resource "scaleway_function_cron" "registry_purge" {
-  count       = var.purge_schedule != "" ? 1 : 0
-  function_id = scaleway_function.registry_purge.id
+  count       = var.purge_enabled && var.purge_schedule != "" ? 1 : 0
+  function_id = scaleway_function.registry_purge[0].id
   schedule    = var.purge_schedule
   args        = "{}"
+}
+
+# Keep the purge resources created before they became optional, instead of replacing them
+moved {
+  from = scaleway_function_namespace.maintenance
+  to   = scaleway_function_namespace.maintenance[0]
+}
+
+moved {
+  from = scaleway_iam_application.registry_purge
+  to   = scaleway_iam_application.registry_purge[0]
+}
+
+moved {
+  from = scaleway_iam_policy.registry_purge
+  to   = scaleway_iam_policy.registry_purge[0]
+}
+
+moved {
+  from = scaleway_iam_api_key.registry_purge
+  to   = scaleway_iam_api_key.registry_purge[0]
+}
+
+moved {
+  from = archive_file.registry_purge
+  to   = archive_file.registry_purge[0]
+}
+
+moved {
+  from = scaleway_function.registry_purge
+  to   = scaleway_function.registry_purge[0]
 }

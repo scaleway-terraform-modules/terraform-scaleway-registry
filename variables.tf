@@ -29,6 +29,13 @@ variable "project_id" {
 }
 
 # Purge function variables
+variable "purge_enabled" {
+  description = "Whether to deploy the purge function, with its function namespace, cron trigger, and the IAM application, policy and API key it uses. When disabled, none of them is created, so no API key secret is stored in the Terraform state."
+  type        = bool
+  default     = true
+  nullable    = false
+}
+
 variable "purge_retention_days" {
   description = "Number of days to keep a tag after its last update (or its creation, if it has no update date) before deleting it. Tags without either date are never deleted."
   type        = number
