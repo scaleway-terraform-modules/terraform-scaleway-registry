@@ -65,15 +65,15 @@ At the end of each run, it logs how many tags were deleted, skipped, preserved, 
 | <a name="input_name"></a> [name](#input_name) | Unique name of the namespace. | `string` | n/a | yes |
 | <a name="input_description"></a> [description](#input_description) | Description of the namespace. | `string` | `null` | no |
 | <a name="input_is_public"></a> [is_public](#input_is_public) | Whether the images stored in the namespace should be downloadable publicly (docker pull). | `bool` | `false` | no |
-| <a name="input_project_id"></a> [project_id](#input_project_id) | ID of the project the namespace is associated with. Ressource will be created in the project set at the provider level if null. | `string` | `null` | no |
+| <a name="input_project_id"></a> [project_id](#input_project_id) | ID of the project the namespace is associated with. Resource will be created in the project set at the provider level if null. | `string` | `null` | no |
 | <a name="input_purge_dry_run"></a> [purge_dry_run](#input_purge_dry_run) | Prevent deletion of tags & images. | `bool` | `true` | no |
 | <a name="input_purge_enabled"></a> [purge_enabled](#input_purge_enabled) | Whether to deploy the purge function, with its function namespace, cron trigger, and the IAM application, policy and API key it uses. When disabled, none of them is created, so no API key secret is stored in the Terraform state. | `bool` | `true` | no |
-| <a name="input_purge_log_level"></a> [purge_log_level](#input_purge_log_level) | Log Level of the purge function. Refer to the Go [slog package documentation](https://pkg.go.dev/log/slog#Level) for accepted values | `number` | `0` | no |
+| <a name="input_purge_log_level"></a> [purge_log_level](#input_purge_log_level) | Log level of the purge function. Refer to the Go [slog package documentation](https://pkg.go.dev/log/slog#Level) for accepted values. | `number` | `0` | no |
 | <a name="input_purge_preserve_tag_patterns"></a> [purge_preserve_tag_patterns](#input_purge_preserve_tag_patterns) | List of regex patterns for tags to preserve. By default, preserves semantic versioning tags and `latest` tags. | `list(string)` | ```[ "^latest((-.+)?)$", "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$" ]``` | no |
 | <a name="input_purge_retention_days"></a> [purge_retention_days](#input_purge_retention_days) | Number of days to keep a tag after its last update (or its creation, if it has no update date) before deleting it. Tags without either date are never deleted. | `number` | `30` | no |
 | <a name="input_purge_schedule"></a> [purge_schedule](#input_purge_schedule) | Cron schedule of the purge function. Set to an empty string to only run it by hand. | `string` | `"0 0 * * *"` | no |
 | <a name="input_purge_timeout"></a> [purge_timeout](#input_purge_timeout) | Timeout of the purge function, in seconds. | `number` | `300` | no |
-| <a name="input_region"></a> [region](#input_region) | Region in which the namespace should be created. Ressource will be created in the region set at the provider level if null. | `string` | `null` | no |
+| <a name="input_region"></a> [region](#input_region) | Region in which the namespace should be created. Resource will be created in the region set at the provider level if null. | `string` | `null` | no |
 
 ## Outputs
 
