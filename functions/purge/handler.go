@@ -194,10 +194,23 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 
 		// Process each tag
 		for _, tag := range tags {
+			// Date the tag with its update date, or its creation date if it has none
+			tagDate := tag.UpdatedAt
+			if tagDate == nil {
+				slog.Warn(fmt.Sprintf("Tag %s:%s (%s) has no update date. Using its creation date", image.Name, tag.Name, tag.ID))
+				tagDate = tag.CreatedAt
+			}
+			// Skip tags without any date: their age is unknown, so never delete them
+			if tagDate == nil {
+				slog.Warn(fmt.Sprintf("Tag %s:%s (%s) has no creation date either. Skipping", image.Name, tag.Name, tag.ID))
+				skippedTags++
+				continue
+			}
+
 			// Check if tag is older than retention date
-			if tag.UpdatedAt.Before(retentionDate) {
+			if tagDate.Before(retentionDate) {
 				slog.Debug(fmt.Sprintf("Tag %s:%s updated at %s is older than retention date %s",
-					image.Name, tag.Name, tag.UpdatedAt.Format(time.RFC3339), retentionDate.Format(time.RFC3339)))
+					image.Name, tag.Name, tagDate.Format(time.RFC3339), retentionDate.Format(time.RFC3339)))
 
 				// Check if tag is protected
 				if config.PreserveTagPatterns.MatchString(tag.Name) {
@@ -215,7 +228,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 				}
 			} else {
 				slog.Debug(fmt.Sprintf("Tag %s updated at %s is newer than retention date %s. Skipping",
-					tag.Name, tag.UpdatedAt.Format(time.RFC3339), retentionDate.Format(time.RFC3339)))
+					tag.Name, tagDate.Format(time.RFC3339), retentionDate.Format(time.RFC3339)))
 				skippedTags++
 			}
 		}
