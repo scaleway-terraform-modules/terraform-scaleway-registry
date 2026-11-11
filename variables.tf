@@ -13,6 +13,7 @@ variable "is_public" {
   description = "Whether the images stored in the namespace should be downloadable publicly (docker pull)."
   type        = bool
   default     = false
+  nullable    = false
 }
 
 variable "region" {
@@ -32,6 +33,7 @@ variable "purge_retention_days" {
   description = "Number of days to keep a tag after its last update (or its creation, if it has no update date) before deleting it. Tags without either date are never deleted."
   type        = number
   default     = 30
+  nullable    = false
 }
 
 variable "purge_preserve_tag_patterns" {
@@ -41,28 +43,33 @@ variable "purge_preserve_tag_patterns" {
     "^latest((-.+)?)$",
     "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
   ]
+  nullable = false
 }
 
 variable "purge_schedule" {
   description = "Cron schedule for the cleanup function. Set to empty string to disable scheduled cleanup."
   type        = string
   default     = "0 0 * * *"
+  nullable    = false
 }
 
 variable "purge_timeout" {
   description = "Timeout for the cleanup function in seconds."
   type        = number
   default     = 300
+  nullable    = false
 }
 
 variable "purge_dry_run" {
   description = "Prevent deletion of tags & images."
   type        = bool
   default     = true
+  nullable    = false
 }
 
 variable "purge_log_level" {
   description = "Log Level of the purge function. Refer to the Go [slog package documentation](https://pkg.go.dev/log/slog#Level) for accepted values"
   type        = number
   default     = 0
+  nullable    = false
 }
