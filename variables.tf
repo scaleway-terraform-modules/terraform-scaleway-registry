@@ -112,6 +112,11 @@ variable "purge_timeout" {
   description = "Timeout of the purge function, in seconds."
   default     = 300
   nullable    = false
+
+  validation {
+    condition     = var.purge_timeout >= 10 && var.purge_timeout <= 3600 && floor(var.purge_timeout) == var.purge_timeout
+    error_message = "'purge_timeout' must be an integer between 10 and 3600 seconds."
+  }
 }
 
 variable "region" {
