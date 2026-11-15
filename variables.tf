@@ -14,6 +14,16 @@ variable "is_public" {
 variable "name" {
   type        = string
   description = "Unique name of the namespace."
+
+  validation {
+    condition     = !var.purge_enabled || can(regex("^[a-z0-9-]+$", var.name))
+    error_message = "'name' must only contain lowercase letters, digits and dashes when 'purge_enabled' is true: it is used in the names of the purge function and its namespace."
+  }
+
+  validation {
+    condition     = !var.purge_enabled || length(var.name) <= 28
+    error_message = "'name' must be at most 28 characters long when 'purge_enabled' is true: the purge function is named '<name>-purge', and function names are limited to 34 characters."
+  }
 }
 
 variable "project_id" {
