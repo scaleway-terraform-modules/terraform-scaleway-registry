@@ -88,6 +88,11 @@ variable "purge_retention_days" {
   description = "Number of days to keep a tag after its last update (or its creation, if it has no update date) before deleting it. Tags without either date are never deleted."
   default     = 30
   nullable    = false
+
+  validation {
+    condition     = var.purge_retention_days >= 1 && floor(var.purge_retention_days) == var.purge_retention_days
+    error_message = "'purge_retention_days' must be an integer greater than or equal to 1."
+  }
 }
 
 variable "purge_schedule" {
