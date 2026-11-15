@@ -32,6 +32,15 @@ variable "project_id" {
   default     = null
 }
 
+variable "purge_api_key" {
+  type = object({
+    access_key = string
+    secret_id  = string
+  })
+  description = "Existing API key for the purge function to use, instead of the IAM application, policy and API key the module creates: its `access_key`, and the `secret_id` of the Secret Manager secret holding its secret key (UUID or `region/UUID`). The module reads the latest version of the secret."
+  default     = null
+}
+
 variable "purge_delete_untagged_images" {
   type        = bool
   description = "Whether the purge function also deletes images left without tags: images whose tags it all deleted, and images without tags older than `purge_retention_days`."

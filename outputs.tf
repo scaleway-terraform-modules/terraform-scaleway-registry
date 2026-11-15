@@ -30,7 +30,7 @@ output "namespace_region" {
 
 # Purge function outputs
 output "purge_application_id" {
-  description = "ID of the IAM application used by the purge function. Null when `purge_enabled` is false."
+  description = "ID of the IAM application used by the purge function. Null when `purge_enabled` is false or `purge_api_key` is set."
   value       = one(scaleway_iam_application.registry_purge[*].id)
 }
 
