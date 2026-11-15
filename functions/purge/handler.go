@@ -170,8 +170,7 @@ func init() {
 		scw.WithDefaultProjectID(config.ProjectID),
 	)
 	if err != nil {
-		slog.Error("Failed to create Scaleway client", "error", err)
-		panic(err)
+		panic(fmt.Errorf("failed to create Scaleway client: %w", err))
 	}
 }
 
