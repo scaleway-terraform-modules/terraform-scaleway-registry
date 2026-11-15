@@ -100,6 +100,11 @@ variable "purge_schedule" {
   description = "Cron schedule of the purge function. Set to an empty string to only run it by hand."
   default     = "0 0 * * *"
   nullable    = false
+
+  validation {
+    condition     = var.purge_schedule == "" || can(regex("^\\S+(\\s+\\S+){4}$", var.purge_schedule))
+    error_message = "'purge_schedule' must be empty or a cron expression with 5 fields (minute, hour, day of the month, month, day of the week)."
+  }
 }
 
 variable "purge_timeout" {
