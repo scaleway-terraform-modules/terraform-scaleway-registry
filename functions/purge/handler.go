@@ -79,7 +79,7 @@ type RegistryClient struct {
 }
 
 var config Config
-var scw_client *scw.Client
+var scwClient *scw.Client
 
 var (
 	ErrMissingAccessKey         = &ConfigError{Field: "REGISTRY_ACCESS_KEY", Message: "Scaleway access key is required"}
@@ -166,7 +166,7 @@ func init() {
 	slog.Info(fmt.Sprintf("Retention Period: %d.", config.RetentionDays))
 	slog.Info(fmt.Sprintf("Tags to preserve: %s", config.PreserveTagPatterns.String()))
 
-	scw_client, err = scw.NewClient(
+	scwClient, err = scw.NewClient(
 		scw.WithAuth(config.AccessKey, config.SecretKey),
 		scw.WithDefaultRegion(scw.Region(config.Region)),
 		scw.WithDefaultProjectID(config.ProjectID),
@@ -191,7 +191,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create registry API client
-	registryAPI := registry.NewAPI(scw_client)
+	registryAPI := registry.NewAPI(scwClient)
 	// Create registry client
 	registryClient := &RegistryClient{
 		client: registryAPI,
