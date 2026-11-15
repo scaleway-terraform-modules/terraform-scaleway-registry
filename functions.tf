@@ -72,13 +72,14 @@ resource "scaleway_function" "registry_purge" {
   zip_hash = archive_file.registry_purge[0].output_sha256
 
   environment_variables = {
-    REGISTRY_NAMESPACE    = scaleway_registry_namespace.this.name
-    REGISTRY_PROJECT_ID   = scaleway_registry_namespace.this.project_id
-    REGISTRY_REGION       = scaleway_registry_namespace.this.region
-    RETENTION_DAYS        = var.purge_retention_days
-    PRESERVE_TAG_PATTERNS = join("|", var.purge_preserve_tag_patterns)
-    DRY_RUN               = var.purge_dry_run
-    LOG_LEVEL             = var.purge_log_level
+    REGISTRY_NAMESPACE     = scaleway_registry_namespace.this.name
+    REGISTRY_PROJECT_ID    = scaleway_registry_namespace.this.project_id
+    REGISTRY_REGION        = scaleway_registry_namespace.this.region
+    RETENTION_DAYS         = var.purge_retention_days
+    PRESERVE_TAG_PATTERNS  = join("|", var.purge_preserve_tag_patterns)
+    DRY_RUN                = var.purge_dry_run
+    DELETE_UNTAGGED_IMAGES = var.purge_delete_untagged_images
+    LOG_LEVEL              = var.purge_log_level
   }
 
   secret_environment_variables = {

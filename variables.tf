@@ -32,6 +32,13 @@ variable "project_id" {
   default     = null
 }
 
+variable "purge_delete_untagged_images" {
+  type        = bool
+  description = "Whether the purge function also deletes images left without tags: images whose tags it all deleted, and images without tags older than `purge_retention_days`."
+  default     = false
+  nullable    = false
+}
+
 variable "purge_dry_run" {
   type        = bool
   description = "Prevent deletion of tags & images."
