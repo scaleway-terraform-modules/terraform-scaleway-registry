@@ -15,8 +15,10 @@ import (
 	"github.com/scaleway/scaleway-sdk-go/scw"
 )
 
-// Default semver pattern for tag preservation
-const DefaultTagPattern string = `^latest((-.+)?)$|^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$`
+// DefaultTagPattern preserves `latest`, `latest-*` and SemVer 2.0.0 tags, as the
+// default of the purge_preserve_tag_patterns variable. It is a raw string: use
+// single backslashes.
+const DefaultTagPattern string = `^latest((-.+)?)$|^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`
 
 // Config holds the configuration for the purge function
 type Config struct {
@@ -155,7 +157,8 @@ func init() {
 
 	config.PreserveTagPatterns, err = regexp.Compile(os.Getenv("PRESERVE_TAG_PATTERNS"))
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to parse PRESERVE_TAG_PATTERNS: %v. Enforcing SemVer 2.0.0 tags", err))
+		slog.Error(fmt.Sprintf("Failed to parse PRESERVE_TAG_PATTERNS: %v. Enforcing Dry Run mode, and preserving latest and SemVer 2.0.0 tags", err))
+		config.DryRun = true
 		config.PreserveTagPatterns = regexp.MustCompile(DefaultTagPattern)
 	}
 
