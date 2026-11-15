@@ -155,14 +155,14 @@ func init() {
 
 	config.PreserveTagPatterns, err = regexp.Compile(os.Getenv("PRESERVE_TAG_PATTERNS"))
 	if err != nil {
-		slog.Error(fmt.Sprintf("Failed to parse PRESERVE_TAG_PATTERNS: %v. Enforcing Dry Run mode, and preserving latest and SemVer 2.0.0 tags", err))
+		slog.Error("Failed to parse PRESERVE_TAG_PATTERNS. Enforcing Dry Run mode, and preserving latest and SemVer 2.0.0 tags", "error", err)
 		config.DryRun = true
 		config.PreserveTagPatterns = regexp.MustCompile(DefaultTagPattern)
 	}
 
-	slog.Info(fmt.Sprintf("Dry Run mode: %t.", config.DryRun))
-	slog.Info(fmt.Sprintf("Retention Period: %d.", config.RetentionDays))
-	slog.Info(fmt.Sprintf("Tags to preserve: %s", config.PreserveTagPatterns.String()))
+	slog.Info("Dry Run mode", "dry_run", config.DryRun)
+	slog.Info("Retention period", "retention_days", config.RetentionDays)
+	slog.Info("Tags to preserve", "pattern", config.PreserveTagPatterns.String())
 
 	scwClient, err = scw.NewClient(
 		scw.WithAuth(config.AccessKey, config.SecretKey),
@@ -170,7 +170,7 @@ func init() {
 		scw.WithDefaultProjectID(config.ProjectID),
 	)
 	if err != nil {
-		slog.Error(fmt.Sprintf("failed to create Scaleway client: %v.", err))
+		slog.Error("Failed to create Scaleway client", "error", err)
 		panic(err)
 	}
 }
@@ -179,7 +179,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	slog.Info("===== Running 'Handle' =====")
 	// Get Retention date
 	retentionDate := time.Now().AddDate(0, 0, -config.RetentionDays)
-	slog.Info(fmt.Sprintf("Purging images older than: %s", retentionDate.Format(time.RFC3339)))
+	slog.Info("Purging images older than the retention date", "retention_date", retentionDate.Format(time.RFC3339))
 
 	// Cancel the API calls when the request ends, e.g. when the function times out
 	ctx := r.Context()
@@ -199,7 +199,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	// Get namespace
 	namespace, err := registryClient.getNamespace(ctx)
 	if err != nil {
-		slog.Error(fmt.Sprintf("failed to get registry namespace: %v.", err))
+		slog.Error("Failed to get registry namespace", "error", err)
 		summary.Error = fmt.Sprintf("failed to get registry namespace: %v", err)
 		writeSummary(w, http.StatusInternalServerError, summary)
 		return
@@ -209,7 +209,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	// Get all images
 	images, err := registryClient.listImages(ctx)
 	if err != nil {
-		slog.Error(fmt.Sprintf("failed to get images from namespace: %v.", err))
+		slog.Error("Failed to get images from namespace", "error", err)
 		summary.Error = fmt.Sprintf("failed to get images from namespace: %v", err)
 		writeSummary(w, http.StatusInternalServerError, summary)
 		return
@@ -225,7 +225,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 		// List tags for the image
 		tags, err := registryClient.listTags(ctx, image)
 		if err != nil {
-			slog.Error(fmt.Sprintf("Failed to list tags for image %s: %v", image.ID, err))
+			slog.Error("Failed to list tags", "image", image.Name, "image_id", image.ID, "error", err)
 			errorImages++
 			continue
 		}
@@ -235,48 +235,47 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 			// Date the tag with its update date, or its creation date if it has none
 			tagDate := tag.UpdatedAt
 			if tagDate == nil {
-				slog.Warn(fmt.Sprintf("Tag %s:%s (%s) has no update date. Using its creation date", image.Name, tag.Name, tag.ID))
+				slog.Warn("Tag has no update date. Using its creation date", "image", image.Name, "tag", tag.Name, "tag_id", tag.ID)
 				tagDate = tag.CreatedAt
 			}
 			// Skip tags without any date: their age is unknown, so never delete them
 			if tagDate == nil {
-				slog.Warn(fmt.Sprintf("Tag %s:%s (%s) has no creation date either. Skipping", image.Name, tag.Name, tag.ID))
+				slog.Warn("Tag has no creation date either. Skipping", "image", image.Name, "tag", tag.Name, "tag_id", tag.ID)
 				skippedTags++
 				continue
 			}
 
 			// Check if tag is older than retention date
 			if tagDate.Before(retentionDate) {
-				slog.Debug(fmt.Sprintf("Tag %s:%s updated at %s is older than retention date %s",
-					image.Name, tag.Name, tagDate.Format(time.RFC3339), retentionDate.Format(time.RFC3339)))
+				slog.Debug("Tag is older than the retention date",
+					"image", image.Name, "tag", tag.Name, "updated_at", tagDate.Format(time.RFC3339), "retention_date", retentionDate.Format(time.RFC3339))
 
 				// Check if tag is protected
 				if config.PreserveTagPatterns.MatchString(tag.Name) {
-					slog.Debug(fmt.Sprintf("Tag %s match protection pattern. Preserving", tag.Name))
+					slog.Debug("Tag matches a preserved pattern. Preserving", "image", image.Name, "tag", tag.Name)
 					preservedTags++
 				} else {
-					slog.Debug(fmt.Sprintf("Tag %s doesn't match protection pattern.", tag.Name))
+					slog.Debug("Tag doesn't match any preserved pattern", "image", image.Name, "tag", tag.Name)
 					// Delete tag if not dry run
 					if err := registryClient.deleteTag(ctx, tag); err != nil {
-						slog.Error(fmt.Sprintf("Failed to delete tag %s (%s): %v", tag.Name, tag.ID, err))
+						slog.Error("Failed to delete tag", "image", image.Name, "tag", tag.Name, "tag_id", tag.ID, "error", err)
 						errorTags++
 						continue
 					}
 					deletedTags++
 				}
 			} else {
-				slog.Debug(fmt.Sprintf("Tag %s updated at %s is newer than retention date %s. Skipping",
-					tag.Name, tagDate.Format(time.RFC3339), retentionDate.Format(time.RFC3339)))
+				slog.Debug("Tag is newer than the retention date. Skipping",
+					"image", image.Name, "tag", tag.Name, "updated_at", tagDate.Format(time.RFC3339), "retention_date", retentionDate.Format(time.RFC3339))
 				skippedTags++
 			}
 		}
 	}
 
 	// Log summary
-	slog.Info(fmt.Sprintf("Purge summary: %d tags deleted, %d tags skipped, %d tags preserved, %d errors",
-		deletedTags, skippedTags, preservedTags, errorTags))
-	slog.Info(fmt.Sprintf("Purge summary: %d images errors",
-		errorImages))
+	slog.Info("Purge summary",
+		"deleted_tags", deletedTags, "skipped_tags", skippedTags, "preserved_tags", preservedTags,
+		"error_tags", errorTags, "error_images", errorImages)
 	// slog.Info(fmt.Sprintf("Purge summary: %d images deleted, %d images skipped, %d images preserved, %d errors",
 	// 	deletedImages, skippedImages, preservedImages, errorImages))
 
@@ -298,18 +297,18 @@ func writeSummary(w http.ResponseWriter, status int, summary Summary) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(summary); err != nil {
-		slog.Error(fmt.Sprintf("Failed to write the response: %v", err))
+		slog.Error("Failed to write the response", "error", err)
 	}
 }
 
 // deleteTag deletes a tag
 func (r *RegistryClient) deleteTag(ctx context.Context, tag *registry.Tag) error {
 	if r.config.DryRun {
-		slog.Info(fmt.Sprintf("[DRY RUN] Would delete tag: %s (%s)", tag.Name, tag.ID))
+		slog.Info("[DRY RUN] Would delete tag", "tag", tag.Name, "tag_id", tag.ID)
 		return nil
 	}
 
-	slog.Info(fmt.Sprintf("Deleting tag: %s (%s)", tag.Name, tag.ID))
+	slog.Info("Deleting tag", "tag", tag.Name, "tag_id", tag.ID)
 	_, err := r.client.DeleteTag(&registry.DeleteTagRequest{
 		Region: scw.Region(r.config.Region),
 		TagID:  tag.ID,
@@ -323,7 +322,7 @@ func (r *RegistryClient) deleteTag(ctx context.Context, tag *registry.Tag) error
 
 // getNamespace gets the registry namespace
 func (r *RegistryClient) getNamespace(ctx context.Context) (*registry.Namespace, error) {
-	slog.Info(fmt.Sprintf("Getting namespace: %s.", r.config.RegistryNamespace))
+	slog.Info("Getting namespace", "namespace", r.config.RegistryNamespace)
 
 	// List namespaces to find the one with the matching name
 	res, err := r.client.ListNamespaces(&registry.ListNamespacesRequest{
@@ -346,7 +345,7 @@ func (r *RegistryClient) getNamespace(ctx context.Context) (*registry.Namespace,
 
 // listImages lists all images in the registry namespace
 func (r *RegistryClient) listImages(ctx context.Context) ([]*registry.Image, error) {
-	slog.Info(fmt.Sprintf("Listing images in namespace: %s", r.namespace.Name))
+	slog.Info("Listing images", "namespace", r.namespace.Name)
 
 	res, err := r.client.ListImages(&registry.ListImagesRequest{
 		Region:      scw.Region(r.config.Region),
@@ -357,13 +356,13 @@ func (r *RegistryClient) listImages(ctx context.Context) ([]*registry.Image, err
 		return nil, fmt.Errorf("failed to list images: %w", err)
 	}
 
-	slog.Info(fmt.Sprintf("Found %d images in namespace: %s", len(res.Images), r.namespace.Name))
+	slog.Info("Found images", "namespace", r.namespace.Name, "count", len(res.Images))
 	return res.Images, nil
 }
 
 // listTags lists all tags for an image
 func (r *RegistryClient) listTags(ctx context.Context, image *registry.Image) ([]*registry.Tag, error) {
-	slog.Info(fmt.Sprintf("Listing tags for image: %s", image.Name))
+	slog.Info("Listing tags", "image", image.Name)
 
 	res, err := r.client.ListTags(&registry.ListTagsRequest{
 		Region:   scw.Region(r.config.Region),
@@ -374,6 +373,6 @@ func (r *RegistryClient) listTags(ctx context.Context, image *registry.Image) ([
 		return nil, fmt.Errorf("failed to list tags for image %s: %w", image.Name, err)
 	}
 
-	slog.Info(fmt.Sprintf("Found %d tags for image: %s", len(res.Tags), image.Name))
+	slog.Info("Found tags", "image", image.Name, "count", len(res.Tags))
 	return res.Tags, nil
 }
