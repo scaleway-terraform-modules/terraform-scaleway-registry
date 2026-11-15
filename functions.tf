@@ -72,6 +72,8 @@ resource "scaleway_function" "registry_purge" {
 
   environment_variables = {
     REGISTRY_NAMESPACE    = var.name
+    REGISTRY_PROJECT_ID   = scaleway_registry_namespace.this.project_id
+    REGISTRY_REGION       = scaleway_registry_namespace.this.region
     RETENTION_DAYS        = var.purge_retention_days
     PRESERVE_TAG_PATTERNS = join("|", var.purge_preserve_tag_patterns)
     DRY_RUN               = var.purge_dry_run
@@ -81,8 +83,6 @@ resource "scaleway_function" "registry_purge" {
   secret_environment_variables = {
     REGISTRY_ACCESS_KEY = scaleway_iam_api_key.registry_purge[0].access_key
     REGISTRY_SECRET_KEY = scaleway_iam_api_key.registry_purge[0].secret_key
-    REGISTRY_PROJECT_ID = scaleway_registry_namespace.this.project_id
-    REGISTRY_REGION     = scaleway_registry_namespace.this.region
   }
 }
 
