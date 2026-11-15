@@ -60,12 +60,27 @@ variable "purge_log_level" {
 
 variable "purge_preserve_tag_patterns" {
   type        = list(string)
-  description = "List of regex patterns for tags to preserve. By default, preserves semantic versioning tags and `latest` tags."
+  description = "List of regex patterns ([RE2 syntax](https://github.com/google/re2/wiki/Syntax)) for tags to preserve. Must contain at least one non-empty pattern. By default, preserves semantic versioning tags and `latest` tags."
   default = [
     "^latest((-.+)?)$",
     "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
   ]
   nullable = false
+
+  validation {
+    condition     = length(var.purge_preserve_tag_patterns) > 0
+    error_message = "'purge_preserve_tag_patterns' must contain at least one pattern: an empty list preserves every tag. Set 'purge_dry_run' to true or 'purge_enabled' to false to keep every tag."
+  }
+
+  validation {
+    condition     = alltrue([for pattern in var.purge_preserve_tag_patterns : pattern != ""])
+    error_message = "'purge_preserve_tag_patterns' must not contain empty patterns: an empty pattern matches, and preserves, every tag."
+  }
+
+  validation {
+    condition     = alltrue([for pattern in var.purge_preserve_tag_patterns : can(regexall(pattern, ""))])
+    error_message = "'purge_preserve_tag_patterns' values must be valid regular expressions (RE2 syntax)."
+  }
 }
 
 variable "purge_retention_days" {
