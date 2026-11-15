@@ -99,7 +99,7 @@ func init() {
 		slogLevel = 0
 	}
 	switch slogLevel {
-	case -4.:
+	case -4:
 		logLevel = slog.LevelDebug
 	case 0:
 		logLevel = slog.LevelInfo
