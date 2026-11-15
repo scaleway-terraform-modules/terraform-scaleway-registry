@@ -90,7 +90,7 @@ var (
 )
 
 func init() {
-	slog.Info("===== Runing 'init' =====")
+	slog.Info("===== Running 'init' =====")
 	// Set log level based on environment variable
 	var logLevel slog.Level
 	slogLevel, err := strconv.Atoi(os.Getenv("LOG_LEVEL"))
@@ -178,7 +178,7 @@ func init() {
 }
 
 func Handle(w http.ResponseWriter, r *http.Request) {
-	slog.Info("===== Runing 'Handle' =====")
+	slog.Info("===== Running 'Handle' =====")
 	// Get Retention date
 	retentionDate := time.Now().AddDate(0, 0, -config.RetentionDays)
 	slog.Info(fmt.Sprintf("Purging images older than: %s", retentionDate.Format(time.RFC3339)))
