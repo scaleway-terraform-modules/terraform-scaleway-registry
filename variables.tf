@@ -51,6 +51,11 @@ variable "purge_log_level" {
   description = "Log level of the purge function. Refer to the Go [slog package documentation](https://pkg.go.dev/log/slog#Level) for accepted values."
   default     = 0
   nullable    = false
+
+  validation {
+    condition     = contains([-4, 0, 4, 8], var.purge_log_level)
+    error_message = "'purge_log_level' must be one of `-4` (Debug), `0` (Info), `4` (Warn) or `8` (Error)."
+  }
 }
 
 variable "purge_preserve_tag_patterns" {
