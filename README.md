@@ -24,7 +24,7 @@ See the [examples](examples) folder for runnable configurations: a [simple](exam
 
 Along with the namespace, the module deploys a Scaleway Function that deletes old tags from it. It runs on the `purge_schedule` cron schedule (every day at midnight by default; set it to `""` to only run it by hand), and logs what it does in Cockpit.
 
-**The function runs in dry-run mode by default:** it only logs the tags it would delete. Set `purge_dry_run = false` to actually delete them.
+**The function runs in dry-run mode by default:** it only logs the tags and images it would delete. Set `purge_dry_run = false` to actually delete them.
 
 The function calls Scaleway's API with an API key the module creates for it: an IAM application with the `ContainerRegistryFullAccess` permission set on the namespace's **whole project**, and an API key that never expires. The key's secret is stored in the Terraform state, so keep the state in a protected backend. If you don't need the purge, set `purge_enabled = false`: the module then creates neither the function nor its IAM resources, and stores no key.
 
@@ -35,9 +35,11 @@ For each tag of each image in the namespace, the function:
 3. Keeps the tag if its name matches one of the `purge_preserve_tag_patterns` regular expressions (by default `latest`, `latest-*` and [semantic versions](https://semver.org/) such as `1.2.3`).
 4. Deletes the tag otherwise.
 
+With `purge_delete_untagged_images = true`, the function then deletes the image if it is left without tags: when it deleted all the image's tags, or when the image had none and is older than `purge_retention_days` days (dated like tags; an image without any date is kept).
+
 The module rejects at plan time a `purge_preserve_tag_patterns` that is empty, contains an empty pattern, or contains a pattern that isn't a valid regular expression ([RE2 syntax](https://github.com/google/re2/wiki/Syntax), as used by both Terraform and Go). If the function still gets an invalid pattern, it logs an error, keeps the default patterns instead, and runs in dry-run mode, even with `purge_dry_run = false`.
 
-At the end of each run, it logs how many tags were deleted, skipped, preserved, or failed to be deleted. It also returns this summary as JSON, with status `200`, or `500` when a tag couldn't be deleted or an image's tags couldn't be listed. When the namespace or its images can't be listed, it stops and returns `500` with the error.
+At the end of each run, it logs how many tags were deleted, skipped, preserved, or failed to be deleted, and how many images were deleted, skipped, or failed. It also returns this summary as JSON, with status `200`, or `500` when a tag or an image couldn't be deleted, or an image's tags couldn't be listed. When the namespace or its images can't be listed, it stops and returns `500` with the error.
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
@@ -69,6 +71,7 @@ At the end of each run, it logs how many tags were deleted, skipped, preserved, 
 | <a name="input_description"></a> [description](#input_description) | Description of the namespace. | `string` | `null` | no |
 | <a name="input_is_public"></a> [is_public](#input_is_public) | Whether the images stored in the namespace should be downloadable publicly (docker pull). | `bool` | `false` | no |
 | <a name="input_project_id"></a> [project_id](#input_project_id) | ID of the project the namespace is associated with. Resource will be created in the project set at the provider level if null. | `string` | `null` | no |
+| <a name="input_purge_delete_untagged_images"></a> [purge_delete_untagged_images](#input_purge_delete_untagged_images) | Whether the purge function also deletes images left without tags: images whose tags it all deleted, and images without tags older than `purge_retention_days`. | `bool` | `false` | no |
 | <a name="input_purge_dry_run"></a> [purge_dry_run](#input_purge_dry_run) | Prevent deletion of tags & images. | `bool` | `true` | no |
 | <a name="input_purge_enabled"></a> [purge_enabled](#input_purge_enabled) | Whether to deploy the purge function, with its function namespace, cron trigger, and the IAM application, policy and API key it uses. When disabled, none of them is created, so no API key secret is stored in the Terraform state. | `bool` | `true` | no |
 | <a name="input_purge_log_level"></a> [purge_log_level](#input_purge_log_level) | Log level of the purge function. Refer to the Go [slog package documentation](https://pkg.go.dev/log/slog#Level) for accepted values. | `number` | `0` | no |
