@@ -1,6 +1,8 @@
 locals {
   # Number of instances of each purge resource: none when the purge is disabled
   purge_count = var.purge_enabled ? 1 : 0
+  # The module creates the function's IAM application, policy and API key, unless the caller provides a key
+  purge_iam_count = var.purge_enabled && var.purge_api_key == null ? 1 : 0
 }
 
 # Create a serverless namespace for maintenance functions
@@ -14,14 +16,14 @@ resource "scaleway_function_namespace" "maintenance" {
 
 # Create an IAM application for the function
 resource "scaleway_iam_application" "registry_purge" {
-  count       = local.purge_count
+  count       = local.purge_iam_count
   name        = format("%s-registry-purge", var.name)
   description = format("Application for the registry %s purge function", var.name)
 }
 
 # Create an IAM policy to allow the function to access the registry
 resource "scaleway_iam_policy" "registry_purge" {
-  count          = local.purge_count
+  count          = local.purge_iam_count
   name           = format("%s-registry-purge-policy", var.name)
   description    = format("Policy for registry %s purge function", var.name)
   application_id = scaleway_iam_application.registry_purge[0].id
@@ -35,10 +37,17 @@ resource "scaleway_iam_policy" "registry_purge" {
 
 # Create an API key for the function
 resource "scaleway_iam_api_key" "registry_purge" {
-  count              = local.purge_count
+  count              = local.purge_iam_count
   application_id     = scaleway_iam_application.registry_purge[0].id
   description        = format("API key for registry %s purge function", var.name)
   default_project_id = scaleway_registry_namespace.this.project_id
+}
+
+# Read the secret key of the API key provided by the caller
+data "scaleway_secret_version" "purge_api_key" {
+  count     = var.purge_enabled && var.purge_api_key != null ? 1 : 0
+  secret_id = var.purge_api_key.secret_id
+  revision  = "latest"
 }
 
 # Archive the function code
@@ -83,8 +92,9 @@ resource "scaleway_function" "registry_purge" {
   }
 
   secret_environment_variables = {
-    REGISTRY_ACCESS_KEY = scaleway_iam_api_key.registry_purge[0].access_key
-    REGISTRY_SECRET_KEY = scaleway_iam_api_key.registry_purge[0].secret_key
+    # From the caller's key if provided, from the module's key otherwise. The secret version's data is base64-encoded.
+    REGISTRY_ACCESS_KEY = var.purge_api_key != null ? var.purge_api_key.access_key : one(scaleway_iam_api_key.registry_purge[*].access_key)
+    REGISTRY_SECRET_KEY = var.purge_api_key != null ? one([for version in data.scaleway_secret_version.purge_api_key : base64decode(version.data)]) : one(scaleway_iam_api_key.registry_purge[*].secret_key)
   }
 }
 

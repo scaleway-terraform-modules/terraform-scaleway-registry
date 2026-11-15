@@ -62,6 +62,7 @@ At the end of each run, it logs how many tags were deleted, skipped, preserved, 
 | [scaleway_iam_application.registry_purge](https://registry.terraform.io/providers/scaleway/scaleway/latest/docs/resources/iam_application) | resource |
 | [scaleway_iam_policy.registry_purge](https://registry.terraform.io/providers/scaleway/scaleway/latest/docs/resources/iam_policy) | resource |
 | [scaleway_registry_namespace.this](https://registry.terraform.io/providers/scaleway/scaleway/latest/docs/resources/registry_namespace) | resource |
+| [scaleway_secret_version.purge_api_key](https://registry.terraform.io/providers/scaleway/scaleway/latest/docs/data-sources/secret_version) | data source |
 
 ## Inputs
 
@@ -71,6 +72,7 @@ At the end of each run, it logs how many tags were deleted, skipped, preserved, 
 | <a name="input_description"></a> [description](#input_description) | Description of the namespace. | `string` | `null` | no |
 | <a name="input_is_public"></a> [is_public](#input_is_public) | Whether the images stored in the namespace should be downloadable publicly (docker pull). | `bool` | `false` | no |
 | <a name="input_project_id"></a> [project_id](#input_project_id) | ID of the project the namespace is associated with. Resource will be created in the project set at the provider level if null. | `string` | `null` | no |
+| <a name="input_purge_api_key"></a> [purge_api_key](#input_purge_api_key) | Existing API key for the purge function to use, instead of the IAM application, policy and API key the module creates: its `access_key`, and the `secret_id` of the Secret Manager secret holding its secret key (UUID or `region/UUID`). The module reads the latest version of the secret. | ```object({ access_key = string secret_id = string })``` | `null` | no |
 | <a name="input_purge_delete_untagged_images"></a> [purge_delete_untagged_images](#input_purge_delete_untagged_images) | Whether the purge function also deletes images left without tags: images whose tags it all deleted, and images without tags older than `purge_retention_days`. | `bool` | `false` | no |
 | <a name="input_purge_dry_run"></a> [purge_dry_run](#input_purge_dry_run) | Prevent deletion of tags & images. | `bool` | `true` | no |
 | <a name="input_purge_enabled"></a> [purge_enabled](#input_purge_enabled) | Whether to deploy the purge function, with its function namespace, cron trigger, and the IAM application, policy and API key it uses. When disabled, none of them is created, so no API key secret is stored in the Terraform state. | `bool` | `true` | no |
@@ -92,7 +94,7 @@ At the end of each run, it logs how many tags were deleted, skipped, preserved, 
 | <a name="output_namespace_name"></a> [namespace_name](#output_namespace_name) | Name of the namespace. |
 | <a name="output_namespace_project_id"></a> [namespace_project_id](#output_namespace_project_id) | ID of the project containing the namespace. |
 | <a name="output_namespace_region"></a> [namespace_region](#output_namespace_region) | Region of the namespace. |
-| <a name="output_purge_application_id"></a> [purge_application_id](#output_purge_application_id) | ID of the IAM application used by the purge function. Null when `purge_enabled` is false. |
+| <a name="output_purge_application_id"></a> [purge_application_id](#output_purge_application_id) | ID of the IAM application used by the purge function. Null when `purge_enabled` is false or `purge_api_key` is set. |
 | <a name="output_purge_cron_id"></a> [purge_cron_id](#output_purge_cron_id) | ID of the cron trigger of the purge function. Null when `purge_enabled` is false or `purge_schedule` is empty. |
 | <a name="output_purge_function_endpoint"></a> [purge_function_endpoint](#output_purge_function_endpoint) | Domain name of the purge function (without `https://`). Null when `purge_enabled` is false. |
 | <a name="output_purge_function_id"></a> [purge_function_id](#output_purge_function_id) | ID of the purge function. Null when `purge_enabled` is false. |
