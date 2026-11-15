@@ -47,7 +47,8 @@ resource "archive_file" "registry_purge" {
   type        = "zip"
   source_dir  = "${path.module}/functions/purge"
   output_path = "${path.module}/functions/purge-${var.name}.zip" # One archive per registry: module calls sourced from the same path share path.module
-  excludes    = [".git", ".gitignore", "README.md", "vendor"]
+  # Go test files are listed with fileset(): archive providers before 2.5.0 don't support globs in excludes
+  excludes = concat([".git", ".gitignore", "README.md", "go.work", "vendor"], tolist(fileset("${path.module}/functions/purge", "**/*_test.go")))
 }
 
 # Deploy the function
