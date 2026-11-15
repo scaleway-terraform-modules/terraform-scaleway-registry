@@ -122,23 +122,18 @@ func init() {
 
 	// Validate required configuration
 	if config.AccessKey == "" {
-		slog.Error("Scaleway access key is required")
 		panic(ErrMissingAccessKey)
 	}
 	if config.ProjectID == "" {
-		slog.Error("Scaleway project ID is required")
 		panic(ErrMissingProjectID)
 	}
 	if config.Region == "" {
-		slog.Error("Region is required")
 		panic(ErrMissingRegion)
 	}
 	if config.RegistryNamespace == "" {
-		slog.Error("Registry namespace is required")
 		panic(ErrMissingRegistryNamespace)
 	}
 	if config.SecretKey == "" {
-		slog.Error("Scaleway secret key is required")
 		panic(ErrMissingSecretKey)
 	}
 
