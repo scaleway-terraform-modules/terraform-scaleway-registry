@@ -58,6 +58,18 @@ variable "purge_log_level" {
   }
 }
 
+variable "purge_memory_limit" {
+  type        = number
+  description = "Memory limit of the purge function, in MB. Its CPU limit is set by Scaleway accordingly. Refer to the [Scaleway documentation](https://www.scaleway.com/en/docs/serverless-functions/reference-content/available-memory-and-cpu-tiers/) for accepted values."
+  default     = 128
+  nullable    = false
+
+  validation {
+    condition     = contains([128, 256, 512, 1024, 2048, 3072, 4096], var.purge_memory_limit)
+    error_message = "'purge_memory_limit' must be one of `128`, `256`, `512`, `1024`, `2048`, `3072` or `4096`."
+  }
+}
+
 variable "purge_preserve_tag_patterns" {
   type        = list(string)
   description = "List of regex patterns ([RE2 syntax](https://github.com/google/re2/wiki/Syntax)) for tags to preserve. Must contain at least one non-empty pattern. By default, preserves semantic versioning tags and `latest` tags."

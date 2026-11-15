@@ -63,7 +63,7 @@ resource "scaleway_function" "registry_purge" {
   runtime      = "go126" # Must provide the Go version required by functions/purge/go.mod: the CI builds with it.
   timeout      = var.purge_timeout
 
-  memory_limit = 128
+  memory_limit = var.purge_memory_limit
   max_scale    = 1
   min_scale    = 0
 
