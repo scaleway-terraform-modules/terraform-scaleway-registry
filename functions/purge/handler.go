@@ -78,6 +78,9 @@ type RegistryClient struct {
 	namespace *registry.Namespace
 }
 
+// listPageSize is the number of images or tags fetched per API call
+const listPageSize = 100
+
 var config Config
 var scwClient *scw.Client
 
@@ -345,66 +348,32 @@ func (r *RegistryClient) getNamespace(ctx context.Context) (*registry.Namespace,
 func (r *RegistryClient) listImages(ctx context.Context) ([]*registry.Image, error) {
 	slog.Info(fmt.Sprintf("Listing images in namespace: %s", r.namespace.Name))
 
-	var allImages []*registry.Image
-	var page int32 = 1
-	var pageSize uint32 = 100
-
-	for {
-		res, err := r.client.ListImages(&registry.ListImagesRequest{
-			Region:      scw.Region(r.config.Region),
-			NamespaceID: &r.namespace.ID,
-			PageSize:    &pageSize, // uint32
-			Page:        &page,     // int32
-		}, scw.WithContext(ctx))
-		if err != nil {
-			return nil, fmt.Errorf("failed to list images: %w", err)
-		}
-
-		allImages = append(allImages, res.Images...)
-
-		// Check if we've reached the last page
-		if len(res.Images) < int(pageSize) {
-			break
-		}
-
-		// Move to the next page
-		page++
+	res, err := r.client.ListImages(&registry.ListImagesRequest{
+		Region:      scw.Region(r.config.Region),
+		NamespaceID: &r.namespace.ID,
+		PageSize:    scw.Uint32Ptr(listPageSize),
+	}, scw.WithContext(ctx), scw.WithAllPages())
+	if err != nil {
+		return nil, fmt.Errorf("failed to list images: %w", err)
 	}
 
-	slog.Info(fmt.Sprintf("Found %d images in namespace: %s", len(allImages), r.namespace.Name))
-	return allImages, nil
+	slog.Info(fmt.Sprintf("Found %d images in namespace: %s", len(res.Images), r.namespace.Name))
+	return res.Images, nil
 }
 
 // listTags lists all tags for an image
 func (r *RegistryClient) listTags(ctx context.Context, image *registry.Image) ([]*registry.Tag, error) {
 	slog.Info(fmt.Sprintf("Listing tags for image: %s", image.Name))
 
-	var allTags []*registry.Tag
-	var page int32 = 1
-	var pageSize uint32 = 100
-
-	for {
-		res, err := r.client.ListTags(&registry.ListTagsRequest{
-			Region:   scw.Region(r.config.Region),
-			ImageID:  image.ID,
-			PageSize: &pageSize,
-			Page:     &page,
-		}, scw.WithContext(ctx))
-		if err != nil {
-			return nil, fmt.Errorf("failed to list tags for image %s: %w", image.Name, err)
-		}
-
-		allTags = append(allTags, res.Tags...)
-
-		// Check if we've reached the last page
-		if len(res.Tags) < int(pageSize) {
-			break
-		}
-
-		// Move to the next page
-		page++
+	res, err := r.client.ListTags(&registry.ListTagsRequest{
+		Region:   scw.Region(r.config.Region),
+		ImageID:  image.ID,
+		PageSize: scw.Uint32Ptr(listPageSize),
+	}, scw.WithContext(ctx), scw.WithAllPages())
+	if err != nil {
+		return nil, fmt.Errorf("failed to list tags for image %s: %w", image.Name, err)
 	}
 
-	slog.Info(fmt.Sprintf("Found %d tags for image: %s", len(allTags), image.Name))
-	return allTags, nil
+	slog.Info(fmt.Sprintf("Found %d tags for image: %s", len(res.Tags), image.Name))
+	return res.Tags, nil
 }
