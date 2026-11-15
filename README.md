@@ -12,8 +12,9 @@ This repository is used to manage a container registry on scaleway using terrafo
 ```hcl
 module "my_registry" {
   source  = "scaleway-terraform-modules/registry/scaleway"
-  version = "~> 1.0"
+  version = "~> 2.0"
 
+  name = "my-registry"
 }
 ```
 
