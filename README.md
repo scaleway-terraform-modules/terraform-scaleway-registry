@@ -28,6 +28,26 @@ Along with the namespace, the module deploys a Scaleway Function that deletes ol
 
 The function calls Scaleway's API with an API key the module creates for it: an IAM application with the `ContainerRegistryFullAccess` permission set on the namespace's **whole project**, and an API key that never expires. The key's secret is stored in the Terraform state, so keep the state in a protected backend. If you don't need the purge, set `purge_enabled = false`: the module then creates neither the function nor its IAM resources, and stores no key.
 
+To use an API key you manage yourself (with your own expiry, rotation or conditions, or shared by several registries), set `purge_api_key`. The module then creates no IAM resources, and passes your key to the function:
+
+- `access_key`: the access key of the API key. It must have the `ContainerRegistryFullAccess` permission set on the namespace's project: the function lists the namespace, its images and tags, and deletes tags and images.
+- `secret_id`: the ID of a Secret Manager secret holding the key's **secret key**, as plain text. The `scaleway_iam_api_key` resource stores it there when created with `secret_id` (Scaleway provider `>= 2.88.0`).
+
+Whoever runs Terraform needs read access to that secret. The module reads its latest version on each plan, so a rotated key is deployed by the next `terraform apply`. The secret key is still stored in the Terraform state, by the module's data source and the function's secret environment variables.
+
+```hcl
+module "my_registry" {
+  source  = "scaleway-terraform-modules/registry/scaleway"
+  version = "~> 2.0"
+
+  name = "my-registry"
+  purge_api_key = {
+    access_key = scaleway_iam_api_key.purge.access_key
+    secret_id  = scaleway_secret.purge_key.id
+  }
+}
+```
+
 For each tag of each image in the namespace, the function:
 
 1. Dates the tag with its last update date. If the tag has no update date, it logs a warning and uses its creation date instead. If it has no creation date either, it logs a second warning and keeps the tag: its age is unknown.
