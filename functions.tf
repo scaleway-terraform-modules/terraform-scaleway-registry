@@ -71,7 +71,7 @@ resource "scaleway_function" "registry_purge" {
   zip_hash = archive_file.registry_purge[0].output_sha256
 
   environment_variables = {
-    REGISTRY_NAMESPACE    = var.name
+    REGISTRY_NAMESPACE    = scaleway_registry_namespace.this.name
     REGISTRY_PROJECT_ID   = scaleway_registry_namespace.this.project_id
     REGISTRY_REGION       = scaleway_registry_namespace.this.region
     RETENTION_DAYS        = var.purge_retention_days
