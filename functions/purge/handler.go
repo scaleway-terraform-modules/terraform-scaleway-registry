@@ -38,6 +38,8 @@ type Config struct {
 	DryRun bool
 	// PreserveTagPatterns is a regex pattern for tags to preserve
 	PreserveTagPatterns *regexp.Regexp
+	// DeleteUntaggedImages if true, deletes images left without tags
+	DeleteUntaggedImages bool
 }
 
 // ConfigError represents a configuration error
@@ -65,7 +67,11 @@ type Summary struct {
 	PreservedTags int `json:"preserved_tags"`
 	// ErrorTags is the number of tags that failed to be deleted
 	ErrorTags int `json:"error_tags"`
-	// ErrorImages is the number of images whose tags failed to be listed
+	// DeletedImages is the number of images left without tags and deleted, or that would be deleted in dry-run mode
+	DeletedImages int `json:"deleted_images"`
+	// SkippedImages is the number of images without tags kept because they are recent or have no date
+	SkippedImages int `json:"skipped_images"`
+	// ErrorImages is the number of images whose tags failed to be listed, or that failed to be deleted
 	ErrorImages int `json:"error_images"`
 	// Error is the error that stopped the run, if any
 	Error string `json:"error,omitempty"`
@@ -153,6 +159,12 @@ func init() {
 		config.RetentionDays = 30
 	}
 
+	config.DeleteUntaggedImages, err = strconv.ParseBool(os.Getenv("DELETE_UNTAGGED_IMAGES"))
+	if err != nil {
+		slog.Warn("Failed to parse DELETE_UNTAGGED_IMAGES. Keeping images without tags")
+		config.DeleteUntaggedImages = false
+	}
+
 	config.PreserveTagPatterns, err = regexp.Compile(os.Getenv("PRESERVE_TAG_PATTERNS"))
 	if err != nil {
 		slog.Error("Failed to parse PRESERVE_TAG_PATTERNS. Enforcing Dry Run mode, and preserving latest and SemVer 2.0.0 tags", "error", err)
@@ -163,6 +175,7 @@ func init() {
 	slog.Info("Dry Run mode", "dry_run", config.DryRun)
 	slog.Info("Retention period", "retention_days", config.RetentionDays)
 	slog.Info("Tags to preserve", "pattern", config.PreserveTagPatterns.String())
+	slog.Info("Delete untagged images", "delete_untagged_images", config.DeleteUntaggedImages)
 
 	scwClient, err = scw.NewClient(
 		scw.WithAuth(config.AccessKey, config.SecretKey),
@@ -215,8 +228,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Track statistics
-	var errorImages int
-	// var deletedImages, preservedImages, skippedImages int
+	var deletedImages, errorImages, skippedImages int
 	var deletedTags, errorTags, preservedTags, skippedTags int
 
 	// Process each image
@@ -229,7 +241,8 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		// Process each tag
+		// Process each tag, counting the tags deleted from this image
+		var imageDeletedTags int
 		for _, tag := range tags {
 			// Date the tag with its update date, or its creation date if it has none
 			tagDate := tag.UpdatedAt
@@ -262,6 +275,7 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 						continue
 					}
 					deletedTags++
+					imageDeletedTags++
 				}
 			} else {
 				slog.Debug("Tag is newer than the retention date. Skipping",
@@ -269,20 +283,37 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 				skippedTags++
 			}
 		}
+
+		// Delete the image if it is left without tags: all its tags were deleted, or it had none
+		if !config.DeleteUntaggedImages || imageDeletedTags < len(tags) {
+			continue
+		}
+		// An image that already had no tags follows the retention period, like tags
+		if len(tags) == 0 && !untaggedImageIsOld(image, retentionDate) {
+			skippedImages++
+			continue
+		}
+		if err := registryClient.deleteImage(ctx, image); err != nil {
+			slog.Error("Failed to delete image", "image", image.Name, "image_id", image.ID, "error", err)
+			errorImages++
+			continue
+		}
+		deletedImages++
 	}
 
 	// Log summary
 	slog.Info("Purge summary",
 		"deleted_tags", deletedTags, "skipped_tags", skippedTags, "preserved_tags", preservedTags,
-		"error_tags", errorTags, "error_images", errorImages)
-	// slog.Info(fmt.Sprintf("Purge summary: %d images deleted, %d images skipped, %d images preserved, %d errors",
-	// 	deletedImages, skippedImages, preservedImages, errorImages))
+		"error_tags", errorTags, "deleted_images", deletedImages, "skipped_images", skippedImages,
+		"error_images", errorImages)
 
 	// Return the summary, with an error status if any tag or image failed
 	summary.DeletedTags = deletedTags
 	summary.SkippedTags = skippedTags
 	summary.PreservedTags = preservedTags
 	summary.ErrorTags = errorTags
+	summary.DeletedImages = deletedImages
+	summary.SkippedImages = skippedImages
 	summary.ErrorImages = errorImages
 	status := http.StatusOK
 	if errorTags > 0 || errorImages > 0 {
@@ -314,6 +345,46 @@ func (r *RegistryClient) deleteTag(ctx context.Context, tag *registry.Tag) error
 	}, scw.WithContext(ctx))
 	if err != nil {
 		return fmt.Errorf("failed to delete tag %s (%s): %w", tag.Name, tag.ID, err)
+	}
+
+	return nil
+}
+
+// untaggedImageIsOld reports whether an image without tags is older than the retention date,
+// dated with its update date, or its creation date if it has none. An image without any date
+// is never old: its age is unknown.
+func untaggedImageIsOld(image *registry.Image, retentionDate time.Time) bool {
+	imageDate := image.UpdatedAt
+	if imageDate == nil {
+		slog.Warn("Image has no update date. Using its creation date", "image", image.Name, "image_id", image.ID)
+		imageDate = image.CreatedAt
+	}
+	if imageDate == nil {
+		slog.Warn("Image has no creation date either. Skipping", "image", image.Name, "image_id", image.ID)
+		return false
+	}
+	if !imageDate.Before(retentionDate) {
+		slog.Debug("Image without tags is newer than the retention date. Skipping",
+			"image", image.Name, "updated_at", imageDate.Format(time.RFC3339), "retention_date", retentionDate.Format(time.RFC3339))
+		return false
+	}
+	return true
+}
+
+// deleteImage deletes an image
+func (r *RegistryClient) deleteImage(ctx context.Context, image *registry.Image) error {
+	if r.config.DryRun {
+		slog.Info("[DRY RUN] Would delete image", "image", image.Name, "image_id", image.ID)
+		return nil
+	}
+
+	slog.Info("Deleting image", "image", image.Name, "image_id", image.ID)
+	_, err := r.client.DeleteImage(&registry.DeleteImageRequest{
+		Region:  scw.Region(r.config.Region),
+		ImageID: image.ID,
+	}, scw.WithContext(ctx))
+	if err != nil {
+		return fmt.Errorf("failed to delete image %s (%s): %w", image.Name, image.ID, err)
 	}
 
 	return nil
